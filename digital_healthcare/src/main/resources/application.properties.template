@@ -1,0 +1,10 @@
+spring.application.name=digital_healthcare
+spring.datasource.url=jdbc:postgresql://localhost:5432/digital_healthcare_pbl
+spring.datasource.username=postgres
+spring.datasource.password=YOUR_PASSWORD_HERE
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
