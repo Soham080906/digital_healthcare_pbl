@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard - ClinicPlus</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-heartbeat"></i>
+                <span>ClinicPlus</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="#appointments" class="nav-link">Appointments</a></li>
+                <li><a href="#doctors" class="nav-link">Doctors</a></li>
+                <li><a href="#clinics" class="nav-link">Clinics</a></li>
+                <li><a href="#" class="nav-link" id="logoutBtn">Logout</a></li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard -->
+    <div class="dashboard">
+        <div class="dashboard-header">
+            <div class="container">
+                <h1 id="welcomeMessage">Welcome to Your Dashboard</h1>
+                <p id="dashboardSubtitle">Manage your healthcare appointments and information</p>
+                <a href="appointments.html" class="btn btn-primary" id="bookAppointmentBtn" style="display:inline-block; margin-top: 1rem;">
+                    <i class="fas fa-calendar-check"></i> Book Appointment
+                </a>
+                
+                <!-- Notification System for Patients -->
+                <div id="notificationSection" class="notification-section" style="display:block; margin-top: 1rem;">
+                    <div class="notification-header">
+                        <button class="notification-toggle" id="notificationToggle" style="background: none; border: none; font-size: 24px; cursor: pointer; position: relative; color: #3b82f6; padding: 0.5rem;">
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge" id="notificationBadge" style="position: absolute; top: 0; right: 0; background: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">0</span>
+                        </button>
+                    </div>
+                    <div class="notification-panel" id="notificationPanel" style="display:none; position: absolute; top: 60px; right: 0; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); z-index: 1000; min-width: 300px;">
+                        <div class="notification-content" style="padding: 1rem;">
+                            <h4 style="margin: 0 0 1rem 0; font-size: 16px; font-weight: 600;">Upcoming Appointments</h4>
+                            <div id="upcomingNotifications" style="max-height: 300px; overflow-y: auto;">
+                                <!-- Notifications will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <div class="container">
+                <!-- Quick Stats -->
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <i class="fas fa-calendar-check"></i>
+                            <h3>My Appointments</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="stat-number" id="appointmentCount">0</div>
+                            <div class="stat-label">Upcoming</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <i class="fas fa-user-md"></i>
+                            <h3>Available Doctors</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="stat-number" id="doctorCount">0</div>
+                            <div class="stat-label">Specialists</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <i class="fas fa-hospital"></i>
+                            <h3>Nearby Clinics</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="stat-number" id="clinicCount">0</div>
+                            <div class="stat-label">Locations</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- My Appointments Section -->
+                <section class="dashboard-section">
+                    <h2>My Appointments</h2>
+                    <div class="appointments-list" id="appointmentsList">
+                        <!-- Appointments will be loaded here -->
+                    </div>
+                </section>
+
+                <!-- Available Doctors Section -->
+                <section id="doctors" class="dashboard-section">
+                    <h2>Available Doctors</h2>
+                    <div class="doctors-grid" id="doctorsGrid">
+                        <!-- Doctors will be loaded here -->
+                    </div>
+                </section>
+
+                <!-- Clinics Section -->
+                <section id="clinics" class="dashboard-section">
+                    <h2>Nearby Clinics</h2>
+                    <div class="clinics-grid" id="clinicsGrid">
+                        <!-- Clinics will be loaded here -->
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="api-client.js"></script>
+    <script>
+        // Check authentication and role on page load
+        window.apiClient.requireAuth();
+        const userRole = (localStorage.getItem('userRole') || '').toLowerCase();
+        if (userRole === 'doctor') {
+            window.location.href = 'doctor-dashboard.html';
+        }
+
+        // Logout button handler
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            if (confirm('Are you sure you want to logout?')) {
+                window.apiClient.logout();
+            }
+        });
+
+        // Initialize dashboard
+        const userName = localStorage.getItem('userName');
+        document.getElementById('welcomeMessage').textContent = `Welcome, ${userName}`;
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                const token = localStorage.getItem('token');
+                const userId = localStorage.getItem('userId');
+                const userName = localStorage.getItem('userName');
+                
+                console.log('=== PATIENT DASHBOARD DEBUG INFO ===');
+                console.log('User ID:', userId);
+                console.log('User Name:', userName);
+                console.log('Token exists:', !!token);
+                console.log('================================');
+                
+                // Load patient's appointments
+                let appointments = [];
+                try {
+                    const appointmentsResponse = await fetch('http://localhost:8080/api/appointments/my-appointments', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    if (appointmentsResponse.ok) {
+                        appointments = await appointmentsResponse.json();
+                        console.log('✅ Appointments API Response:', appointments);
+                        console.log('Appointments loaded successfully:', appointments.length);
+                    } else {
+                        console.warn('❌ Failed to load appointments:', appointmentsResponse.status, appointmentsResponse.statusText);
+                        appointments = [];
+                    }
+                } catch (err) {
+                    console.error('❌ Error fetching appointments:', err);
+                    appointments = [];
+                }
+                
+                // Filter out cancelled appointments for display
+                const activeAppointments = appointments.filter(apt => apt.status !== 'cancelled' && apt.status !== 'cancel');
+                console.log('Active appointments (after filtering):', activeAppointments.length);
+                console.log('Active appointments data:', activeAppointments);
+                document.getElementById('appointmentCount').textContent = activeAppointments.length;
+                loadAppointmentsList(activeAppointments);
+
+                // Load doctors
+                let doctors = [];
+                try {
+                    const doctorsResponse = await fetch('http://localhost:8080/api/doctors');
+                    if (doctorsResponse.ok) {
+                        doctors = await doctorsResponse.json();
+                        console.log('Doctors loaded successfully:', doctors.length);
+                    } else {
+                        console.warn('Failed to load doctors:', doctorsResponse.status);
+                    }
+                } catch (err) {
+                    console.error('Error fetching doctors:', err);
+                }
+                document.getElementById('doctorCount').textContent = doctors.length;
+                populateDoctorsGrid(doctors);
+
+                // Load clinics
+                let clinics = [];
+                try {
+                    const clinicsResponse = await fetch('http://localhost:8080/api/clinics');
+                    if (clinicsResponse.ok) {
+                        clinics = await clinicsResponse.json();
+                        console.log('Clinics loaded successfully:', clinics.length);
+                    } else {
+                        console.warn('Failed to load clinics:', clinicsResponse.status);
+                    }
+                } catch (err) {
+                    console.error('Error fetching clinics:', err);
+                }
+                document.getElementById('clinicCount').textContent = clinics.length;
+                populateClinicsGrid(clinics);
+
+                // Load notifications for patients
+                loadNotifications();
+
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        // Load appointments list
+        function loadAppointmentsList(appointments) {
+            const appointmentsList = document.getElementById('appointmentsList');
+            appointmentsList.innerHTML = '';
+            
+            if (!appointments || appointments.length === 0) {
+                appointmentsList.innerHTML = '<p class="no-data">No appointments found. <a href="appointments.html">Book an appointment</a></p>';
+                return;
+            }
+
+            appointments.forEach(appointment => {
+                const appointmentCard = document.createElement('div');
+                appointmentCard.className = `appointment-card ${appointment.status === 'cancelled' ? 'cancelled-appointment' : ''}`;
+                
+                const doctorName = appointment.doctor ? 
+                    (typeof appointment.doctor === 'string' ? appointment.doctor : appointment.doctor.name || 'Doctor') 
+                    : 'Doctor';
+                const clinicName = appointment.clinic ? 
+                    (typeof appointment.clinic === 'string' ? appointment.clinic : appointment.clinic.name || 'Clinic') 
+                    : 'Clinic';
+                const appointmentDate = new Date(appointment.slot);
+                const statusClass = (appointment.status || 'pending').toLowerCase();
+                
+                appointmentCard.innerHTML = `
+                    <div class="appointment-header">
+                        <h3>${doctorName}</h3>
+                        <span class="status ${statusClass}">${appointment.status || 'pending'}</span>
+                    </div>
+                    <div class="appointment-details">
+                        <p><i class="fas fa-calendar"></i> ${appointmentDate.toLocaleDateString()}</p>
+                        <p><i class="fas fa-clock"></i> ${appointmentDate.toLocaleTimeString()}</p>
+                        <p><i class="fas fa-hospital"></i> ${clinicName}</p>
+                    </div>
+                    <div class="appointment-actions">
+                        ${appointment.status === 'cancelled' ? `
+                            <span class="cancelled-status">
+                                <i class="fas fa-times-circle"></i> Cancelled
+                            </span>
+                        ` : `
+                            <button class="btn btn-danger btn-sm cancel-appointment" data-appointment-id="${appointment._id || appointment.id}">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        `}
+                    </div>
+                `;
+                appointmentsList.appendChild(appointmentCard);
+            });
+
+            // Add event listeners for cancel buttons
+            document.querySelectorAll('.cancel-appointment').forEach(button => {
+                button.addEventListener('click', cancelAppointment);
+            });
+        }
+
+        // Populate doctors grid
+        function populateDoctorsGrid(doctors) {
+            const doctorsGrid = document.getElementById('doctorsGrid');
+            doctorsGrid.innerHTML = '';
+            
+            doctors.forEach(doctor => {
+                const doctorCard = document.createElement('div');
+                doctorCard.className = 'doctor-card';
+                
+                const doctorName = doctor.user ? 
+                    (doctor.user.name || 'Doctor Name Not Available') 
+                    : (doctor.name || 'Doctor Name Not Available');
+                const specialization = doctor.specialization || 'Specialist';
+                const clinicName = doctor.clinic ? 
+                    (typeof doctor.clinic === 'string' ? doctor.clinic : (doctor.clinic.name || 'Clinic not assigned'))
+                    : 'Clinic not assigned';
+                const experience = doctor.experience || doctor.yearsOfExperience || 'N/A';
+                
+                doctorCard.innerHTML = `
+                    <div class="doctor-avatar">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <div class="doctor-info">
+                        <h3>${doctorName}</h3>
+                        <p class="specialization">${specialization}</p>
+                        <p class="clinic">${clinicName}</p>
+                        ${experience !== 'N/A' ? `<p class="experience">${experience} years experience</p>` : ''}
+                    </div>
+                `;
+                doctorsGrid.appendChild(doctorCard);
+            });
+        }
+
+        // Populate clinics grid
+        function populateClinicsGrid(clinics) {
+            const clinicsGrid = document.getElementById('clinicsGrid');
+            clinicsGrid.innerHTML = '';
+            
+            clinics.forEach(clinic => {
+                const clinicCard = document.createElement('div');
+                clinicCard.className = 'clinic-card';
+                clinicCard.innerHTML = `
+                    <div class="clinic-icon">
+                        <i class="fas fa-hospital"></i>
+                    </div>
+                    <div class="clinic-info">
+                        <h3>${clinic.name}</h3>
+                        <p>${clinic.location}</p>
+                    </div>
+                `;
+                clinicsGrid.appendChild(clinicCard);
+            });
+        }
+
+        // Load notifications
+        async function loadNotifications() {
+            try {
+                const token = localStorage.getItem('token');
+                const appointmentsResponse = await fetch('http://localhost:8080/api/appointments/my-appointments', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (appointmentsResponse.ok) {
+                    const appointments = await appointmentsResponse.json();
+                    const upcomingAppointments = appointments.filter(apt => {
+                        const appointmentDate = new Date(apt.slot);
+                        return appointmentDate > new Date() && apt.status !== 'cancelled';
+                    });
+                    
+                    document.getElementById('notificationBadge').textContent = upcomingAppointments.length;
+                    
+                    const notificationsContainer = document.getElementById('upcomingNotifications');
+                    notificationsContainer.innerHTML = '';
+                    
+                    if (upcomingAppointments.length === 0) {
+                        notificationsContainer.innerHTML = '<p>No upcoming appointments</p>';
+                        return;
+                    }
+                    
+                    upcomingAppointments.forEach(apt => {
+                        const notifDiv = document.createElement('div');
+                        notifDiv.className = 'notification-item';
+                        notifDiv.style.cssText = 'padding: 0.75rem; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.2s;';
+                        notifDiv.onmouseover = () => notifDiv.style.background = '#f9fafb';
+                        notifDiv.onmouseout = () => notifDiv.style.background = 'white';
+                        const docName = apt.doctor ? (typeof apt.doctor === 'string' ? apt.doctor : apt.doctor.name) : 'Doctor';
+                        const aptDate = new Date(apt.slot).toLocaleDateString();
+                        notifDiv.innerHTML = `
+                            <i class="fas fa-calendar-check" style="color: #3b82f6; margin-right: 0.5rem;"></i>
+                            <span style="font-size: 14px;">Appointment with <strong>${docName}</strong> on ${aptDate}</span>
+                        `;
+                        notificationsContainer.appendChild(notifDiv);
+                    });
+                }
+            } catch (err) {
+                console.error('Error loading notifications:', err);
+            }
+        }
+
+        // Notification toggle
+        document.getElementById('notificationToggle').addEventListener('click', () => {
+            const panel = document.getElementById('notificationPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Cancel appointment
+        async function cancelAppointment(e) {
+            const appointmentId = e.target.closest('.cancel-appointment').getAttribute('data-appointment-id');
+            
+            if (!confirm('Are you sure you want to cancel this appointment?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                
+                if (response.ok) {
+                    window.showToast('Appointment cancelled successfully', 'success');
+                    loadDashboardData();
+                } else {
+                    window.showToast('Failed to cancel appointment', 'error');
+                }
+            } catch (err) {
+                console.error('Error cancelling appointment:', err);
+                window.showToast('Error cancelling appointment', 'error');
+            }
+        }
+
+        // Load everything on page load
+        window.addEventListener('load', () => {
+            loadDashboardData();
+        });
+    </script>
+</body>
+</html>

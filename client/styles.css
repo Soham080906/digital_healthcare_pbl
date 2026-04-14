@@ -831,4 +831,316 @@ body {
                 margin-top: 0.5rem;
             }
         }
+
+    /* Appointments Section Styles */
+    .appointments-section {
+        margin-top: 2rem;
+    }
+
+    .appointments-section h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .appointments-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .appointment-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border-left: 4px solid #3b82f6;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .appointment-card:hover {
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+        transform: translateY(-4px);
+    }
+
+    .doctor-appointment-card {
+        border-left-color: #8b5cf6;
+    }
+
+    .doctor-appointment-card.confirmed {
+        border-left-color: #10b981;
+    }
+
+    .doctor-appointment-card.pending {
+        border-left-color: #f59e0b;
+    }
+
+    .doctor-appointment-card.cancelled {
+        border-left-color: #ef4444;
+        opacity: 0.7;
+    }
+
+    .appointment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+        gap: 1rem;
+    }
+
+    .patient-info {
+        flex: 1;
+    }
+
+    .patient-main h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+    }
+
+    .patient-email {
+        font-size: 0.9rem;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .patient-email i {
+        color: #3b82f6;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .status-badge.confirmed {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    .status-badge.pending {
+        background: rgba(245, 158, 11, 0.1);
+        color: #f59e0b;
+    }
+
+    .status-badge.cancelled {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+
+    .status-badge.rescheduled {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+
+    .appointment-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .detail-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.95rem;
+        color: #475569;
+    }
+
+    .detail-row i {
+        color: #3b82f6;
+        width: 18px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .appointment-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .appointment-actions button {
+        flex: 1;
+        padding: 0.75rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-view-patient {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+
+    .btn-view-patient:hover {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .btn-reschedule {
+        background: rgba(168, 85, 247, 0.1);
+        color: #a855f7;
+    }
+
+    .btn-reschedule:hover {
+        background: #a855f7;
+        color: white;
+    }
+
+    .btn-cancel {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+
+    .btn-cancel:hover {
+        background: #ef4444;
+        color: white;
+    }
+
+    .no-data {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: #64748b;
+        background: #f8fafc;
+        border-radius: 15px;
+        border: 2px dashed #cbd5e1;
+    }
+
+    .no-data i {
+        font-size: 3rem;
+        color: #cbd5e1;
+        margin-bottom: 1rem;
+        display: block;
+    }
+
+    /* Clinics Section Styles */
+    .clinics-section {
+        margin-top: 3rem;
+    }
+
+    .clinics-section h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 1.5rem;
+    }
+
+    .clinics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .clinic-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .clinic-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .clinic-card h3 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .clinic-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        font-size: 0.95rem;
+        opacity: 0.95;
+    }
+
+    .clinic-info div {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .clinic-info i {
+        width: 20px;
+        text-align: center;
+    }
+
+    /* Profile Modal/Edit Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .modal-header {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .close-modal {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #64748b;
+        transition: color 0.3s ease;
+    }
+
+    .close-modal:hover {
+        color: #1e293b;
+    }
     

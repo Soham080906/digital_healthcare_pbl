@@ -187,6 +187,7 @@
     </footer>
 
     <script src="script.js"></script>
+    <script src="api-client.js"></script>
     <script>
         // Check if user is logged in and update UI accordingly
         document.addEventListener('DOMContentLoaded', function() {
@@ -258,11 +259,7 @@
                 // Add logout functionality
                 document.getElementById('logoutBtn').addEventListener('click', function(e) {
                     e.preventDefault();
-                    localStorage.clear();
-                    showToast('Logged out successfully', 'success');
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
+                    window.apiClient.logout();
                 });
                 
             } else {

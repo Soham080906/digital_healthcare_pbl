@@ -185,4 +185,35 @@ if (!document.querySelector('#toast-styles')) {
 
 // Export functions for use in other files
 window.showToast = showToast;
-window.addLoadingState = addLoadingState; 
+window.addLoadingState = addLoadingState;
+
+// Navigation Authentication State Management
+// Update navbar based on authentication status
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if we need to update navigation
+    if (typeof window.apiClient !== 'undefined') {
+        const isAuthenticated = window.apiClient.isAuthenticated();
+        const loginLink = document.getElementById('loginLink');
+        const registerLink = document.getElementById('registerLink');
+        const logoutBtn = document.getElementById('logoutBtn');
+        
+        if (isAuthenticated) {
+            // Hide login/register links for authenticated users
+            if (loginLink) loginLink.style.display = 'none';
+            if (registerLink) registerLink.style.display = 'none';
+            
+            // Login/Register links might be in appointments page
+            const navLinks = document.querySelectorAll('a[href="login.html"], a[href="register.html"]');
+            navLinks.forEach(link => {
+                if (link !== loginLink && link !== registerLink) {
+                    link.style.display = 'none';
+                }
+            });
+        } else {
+            // Hide logout button for non-authenticated users
+            if (logoutBtn && logoutBtn.textContent.includes('Logout')) {
+                logoutBtn.style.display = 'none';
+            }
+        }
+    }
+});

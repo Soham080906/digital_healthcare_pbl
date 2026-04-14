@@ -128,7 +128,20 @@
     </div>
 
     <script src="script.js"></script>
+    <script src="api-client.js"></script>
     <script>
+        // Check if user is authenticated (required for booking)
+        // For appointments page, we allow viewing but require login for booking
+        function checkAuthForBooking() {
+            const token = localStorage.getItem('token');
+            return !!token;
+        }
+
+        // Redirect to login with return URL for booking
+        function redirectToLogin() {
+            window.location.href = 'login.html?return=appointments.html';
+        }
+
         // Global variables
         let allDoctors = [];
         let selectedDate = '';
@@ -171,16 +184,46 @@
         // Load clinics and doctors
         async function loadBookingData() {
             try {
+                console.log('Loading booking data from backend...');
+                
                 // Load clinics
-                const clinicsResponse = await fetch('http://localhost:8080/api/clinics');
-                const clinics = await clinicsResponse.json();
-                populateClinicSelect(clinics);
+                let clinics = [];
+                try {
+                    const clinicsResponse = await fetch('http://localhost:8080/api/clinics', {
+                        method: 'GET',
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    if (clinicsResponse.ok) {
+                        clinics = await clinicsResponse.json();
+                        console.log('Clinics loaded:', clinics);
+                        populateClinicSelect(clinics);
+                    } else {
+                        throw new Error(`Clinics API returned ${clinicsResponse.status}`);
+                    }
+                } catch (clinicErr) {
+                    console.warn('Failed to load clinics, using mock data:', clinicErr);
+                    clinics = getMockClinics();
+                    populateClinicSelect(clinics);
+                }
 
                 // Load doctors
-                const doctorsResponse = await fetch('http://localhost:8080/api/doctors');
-                allDoctors = await doctorsResponse.json();
-                // Initially populate with all doctors
-                populateDoctorSelect(allDoctors);
+                try {
+                    const doctorsResponse = await fetch('http://localhost:8080/api/doctors', {
+                        method: 'GET',
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    if (doctorsResponse.ok) {
+                        allDoctors = await doctorsResponse.json();
+                        console.log('Doctors loaded:', allDoctors);
+                        populateDoctorSelect([]);
+                    } else {
+                        throw new Error(`Doctors API returned ${doctorsResponse.status}`);
+                    }
+                } catch (docErr) {
+                    console.warn('Failed to load doctors, using mock data:', docErr);
+                    allDoctors = getMockDoctors();
+                    populateDoctorSelect([]);
+                }
             } catch (error) {
                 console.error('Error loading booking data:', error);
                 // Fallback to mock data for demonstration
@@ -188,22 +231,29 @@
             }
         }
 
-        function loadMockData() {
-            // Mock clinics
-            const mockClinics = [
-                { _id: '1', name: 'City General Hospital' },
-                { _id: '2', name: 'Community Medical Center' },
-                { _id: '3', name: 'Downtown Clinic' }
+        function getMockClinics() {
+            return [
+                { id: '1', _id: '1', name: 'City General Hospital' },
+                { id: '2', _id: '2', name: 'Community Medical Center' },
+                { id: '3', _id: '3', name: 'Downtown Clinic' }
             ];
+        }
+
+        function getMockDoctors() {
+            return [
+                { id: '1', _id: '1', user: { name: 'Dr. Sarah Johnson' }, specialization: 'Cardiologist', clinic: { id: '1', _id: '1' } },
+                { id: '2', _id: '2', user: { name: 'Dr. Michael Chen' }, specialization: 'Pediatrician', clinic: { id: '1', _id: '1' } },
+                { id: '3', _id: '3', user: { name: 'Dr. Emily Davis' }, specialization: 'Dermatologist', clinic: { id: '2', _id: '2' } },
+                { id: '4', _id: '4', user: { name: 'Dr. Robert Wilson' }, specialization: 'General Physician', clinic: { id: '3', _id: '3' } }
+            ];
+        }
+
+        function loadMockData() {
+            console.log('Loading mock data...');
+            const mockClinics = getMockClinics();
             populateClinicSelect(mockClinics);
 
-            // Mock doctors
-            allDoctors = [
-                { _id: '1', user: { name: 'Dr. Sarah Johnson' }, specialization: 'Cardiologist', clinic: { _id: '1' } },
-                { _id: '2', user: { name: 'Dr. Michael Chen' }, specialization: 'Pediatrician', clinic: { _id: '1' } },
-                { _id: '3', user: { name: 'Dr. Emily Davis' }, specialization: 'Dermatologist', clinic: { _id: '2' } },
-                { _id: '4', user: { name: 'Dr. Robert Wilson' }, specialization: 'General Physician', clinic: { _id: '3' } }
-            ];
+            allDoctors = getMockDoctors();
             populateDoctorSelect([]);
         }
         
@@ -272,7 +322,9 @@
 
             try {
                 // Fetch booked slots from backend
-                const response = await fetch(`http://localhost:8080/api/appointments/booked-slots/${selectedDoctor}/${selectedDate}`);
+                const response = await fetch(`http://localhost:8080/api/appointments/booked-slots/${selectedDoctor}/${selectedDate}`, {
+                    cache: 'no-cache' // Ensure fresh data, no browser caching
+                });
                 console.debug('booked-slots response status:', response.status);
                 
                 if (response.ok) {
@@ -429,6 +481,15 @@
 
         // Book appointment functionality
         document.getElementById('bookAppointment').addEventListener('click', async () => {
+            // Check authentication first
+            if (!checkAuthForBooking()) {
+                window.showToast('Please login to book an appointment', 'error');
+                setTimeout(() => {
+                    redirectToLogin();
+                }, 1500);
+                return;
+            }
+
             const clinic = document.getElementById('clinic').value;
             const doctor = document.getElementById('doctor').value;
             const date = document.getElementById('date').value;
@@ -452,33 +513,21 @@
             }
 
             const slot = new Date(`${date}T${time}`);
-
-            // Check if user is logged in
-            const token = localStorage.getItem('token');
-            if (!token) {
-                window.showToast('Please login to book an appointment', 'error');
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 2000);
-                return;
-            }
+            
+            // Get the button for loading state
+            const button = document.getElementById('bookAppointment');
+            const restoreButton = window.addLoadingState(button);
 
             try {
-                const response = await fetch('http://localhost:8080/api/appointments', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        clinic,
-                        doctor,
-                        slot: slot.toISOString(),
-                        notes
-                    })
+                // Use api-client for the request with JWT token
+                const result = await window.apiClient.apiPost('/appointments', {
+                    clinic,
+                    doctor,
+                    slot: slot.toISOString(),
+                    notes
                 });
 
-                if (response.ok) {
+                if (result) {
                     window.showToast('Appointment booked successfully!', 'success');
                     
                     // Clear the selected time slot
@@ -494,16 +543,18 @@
                     if (selectedDoctor && selectedDate) {
                         setTimeout(() => {
                             loadAvailableSlots();
-                        }, 500); // Small delay to ensure backend is updated
+                        }, 1000); // Wait 1 second for backend transaction to commit
                     }
+                    
+                    restoreButton();
                 } else {
-                    const error = await response.text();
-                    window.showToast(`Booking failed: ${error}`, 'error');
-                    console.log('Booking error:', error); // Debug log
+                    // Error already handled by api-client
+                    restoreButton();
                 }
             } catch (error) {
                 console.error('Error booking appointment:', error);
                 window.showToast('An error occurred while booking the appointment.', 'error');
+                restoreButton();
             }
         });
 
@@ -530,32 +581,47 @@
             }
         }
 
-        // Force refresh slots when page becomes visible
+        // Handle page visibility changes and refresh slots accordingly
+        let refreshInterval;
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden) {
+                // Check immediately when page becomes visible
                 checkSlotsRefresh();
+                // Check more frequently (every 2 seconds) when page is visible
+                refreshInterval = setInterval(checkSlotsRefresh, 2000);
+            } else {
+                // Clear frequent checking when page is hidden
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                }
             }
         });
 
-        // Initialize page
-        setMinDate();
-        loadBookingData();
-        checkSlotsRefresh();
-        
-        // Show initial message for time slots
-        const timeSlotsGrid = document.getElementById('timeSlotsGrid');
-        timeSlotsGrid.innerHTML = '<div class="no-slots-message">Please select a date and doctor to view available time slots</div>';
-
-        // Check for slot refresh periodically (in case of cancellations from other tabs)
-        setInterval(checkSlotsRefresh, 5000); // Check every 5 seconds
-
-        // Manual refresh function
+        // Initialize page - wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Initializing appointments page...');
+            setMinDate();
+            
+            // Show initial message for time slots
+            const timeSlotsGrid = document.getElementById('timeSlotsGrid');
+            if (timeSlotsGrid) {
+                timeSlotsGrid.innerHTML = '<div class="no-slots-message">Loading clinics and doctors...</div>';
+            }
+            
+            // Load booking data
+            loadBookingData();
+            checkSlotsRefresh();
+            
+            // Fallback: Check for slot refresh every 5 seconds as backup
+            setInterval(checkSlotsRefresh, 5000);
+        });
+        // Refresh time slots function
         function refreshTimeSlots() {
             if (selectedDoctor && selectedDate) {
                 console.log('Manual refresh of time slots');
                 const refreshBtn = document.getElementById('refreshSlotsBtn');
                 const originalHTML = refreshBtn.innerHTML;
-                refreshBtn.innerHTML = '<i class="fas fa-spin fa-spinner"></i> Refreshing...';
+                refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
                 refreshBtn.disabled = true;
                 
                 loadAvailableSlots().then(() => {

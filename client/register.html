@@ -85,7 +85,7 @@
                     
                     <div class="form-group">
                         <label for="phone">Phone Number</label>
-                        <input type="tel" id="phone" name="phone" placeholder="Enter your phone number">
+                        <input type="tel" id="phone" name="phone" placeholder="Enter your phone number" maxlength="10" pattern="[0-9]*">
                     </div>
                     
                     <div class="form-group">
@@ -112,7 +112,14 @@
         </div>
     </div>
 
+    <script src="script.js"></script>
+    <script src="api-client.js"></script>
     <script>
+        // If user is already logged in, redirect to dashboard
+        if (window.apiClient.isAuthenticated()) {
+            window.location.href = 'dashboard.html';
+        }
+
         // Load clinics for doctor registration
         async function loadClinics() {
             try {
@@ -194,13 +201,17 @@
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            const button = e.target.querySelector('button[type="submit"]');
+            const restoreButton = window.addLoadingState(button);
+            
             const formData = new FormData(e.target);
             const password = formData.get('password');
             const confirmPassword = formData.get('confirmPassword');
             const role = formData.get('role');
             
             if (password !== confirmPassword) {
-                showToast('Passwords do not match!', 'error');
+                window.showToast('Passwords do not match!', 'error');
+                restoreButton();
                 return;
             }
             
@@ -213,11 +224,27 @@
             
             // Add doctor-specific data if registering as doctor
             if (role === 'doctor') {
+                const phone = formData.get('phone');
+                
+                // Validate phone number - check if it exceeds 10 digits
+                if (phone && phone.length > 10) {
+                    window.showToast('Phone number should not exceed 10 digits!', 'error');
+                    restoreButton();
+                    return;
+                }
+                
+                // Validate phone number - check if it contains only digits
+                if (phone && !/^\d+$/.test(phone)) {
+                    window.showToast('Phone number should contain only digits!', 'error');
+                    restoreButton();
+                    return;
+                }
+                
                 data.specialization = formData.get('specialization');
                 data.licenseNumber = formData.get('licenseNumber');
                 data.experience = formData.get('experience') ? parseInt(formData.get('experience')) : null;
                 data.education = formData.get('education');
-                data.phone = formData.get('phone');
+                data.phone = phone;
                 // include clinicId only if a clinic was selected
                 const clinicValue = formData.get('clinic');
                 data.clinicId = clinicValue ? parseInt(clinicValue) : null;
@@ -235,7 +262,7 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    showToast('Registration successful! Auto-login in progress...', 'success');
+                    window.showToast('Registration successful! Auto-login in progress...', 'success');
                     
                     // Auto-login after successful registration
                     try {
@@ -266,29 +293,37 @@
                                 localStorage.setItem('doctorProfile', JSON.stringify(loginResult.doctorProfile));
                             }
                             
-                            showToast('Auto-login successful! Redirecting to dashboard...', 'success');
+                            // Store patient profile if available
+                            if (loginResult.patientProfile) {
+                                localStorage.setItem('patientProfile', JSON.stringify(loginResult.patientProfile));
+                            }
+                            
+                            window.showToast('Auto-login successful! Redirecting to dashboard...', 'success');
                             setTimeout(() => {
                                 window.location.href = 'dashboard.html';
                             }, 1500);
                         } else {
-                            showToast('Registration successful! Please login manually.', 'success');
+                            window.showToast('Registration successful! Please login manually.', 'success');
                             setTimeout(() => {
                                 window.location.href = 'login.html';
                             }, 2000);
                         }
                     } catch (loginError) {
                         console.error('Auto-login error:', loginError);
-                        showToast('Registration successful! Please login manually.', 'success');
+                        window.showToast('Registration successful! Please login manually.', 'success');
+                        restoreButton();
                         setTimeout(() => {
                             window.location.href = 'login.html';
                         }, 2000);
                     }
                 } else {
-                    showToast(result.error || 'Registration failed. Please try again.', 'error');
+                    window.showToast(result.error || result.message || 'Registration failed. Please try again.', 'error');
+                    restoreButton();
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('An error occurred. Please try again.', 'error');
+                window.showToast('An error occurred. Please try again.', 'error');
+                restoreButton();
             }
         });
 
