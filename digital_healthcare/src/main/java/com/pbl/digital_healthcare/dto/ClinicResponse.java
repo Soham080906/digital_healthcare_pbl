@@ -6,13 +6,17 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class BookedSlotsResponse {
-    private List<String> bookedSlots;
+public class ClinicResponse {
+    private Long id;
+    private String name;
+    private String location;
+    private String phone;
+    private String email;
+    private String hours;
+    private String services;
 }

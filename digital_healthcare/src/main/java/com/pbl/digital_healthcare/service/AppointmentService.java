@@ -135,8 +135,19 @@ public class AppointmentService {
         LocalDateTime startOfDay = localDate.atStartOfDay();
         LocalDateTime endOfDay = localDate.atTime(LocalTime.MAX);
 
+        System.out.println("DEBUG: Searching for appointments between " + startOfDay + " and " + endOfDay);
+        
         List<Appointment> appointments = appointmentRepository.findByDoctorAndSlotBetweenAndStatus(
                 doctor, startOfDay, endOfDay, AppointmentStatus.CONFIRMED);
+
+        System.out.println("DEBUG: Found " + appointments.size() + " confirmed appointments for doctor " + doctorId + " on " + date);
+        
+        // Also check all appointments (including cancelled) for debugging
+        List<Appointment> allAppointments = appointmentRepository.findByDoctorAndSlotBetween(
+                doctor, startOfDay, endOfDay);
+        System.out.println("DEBUG: Total appointments (all statuses): " + allAppointments.size());
+        allAppointments.forEach(apt -> 
+            System.out.println("DEBUG: Appointment at " + apt.getSlot() + " with status " + apt.getStatus()));
 
         List<String> bookedSlots = appointments.stream()
                 .map(appointment -> appointment.getSlot().format(DateTimeFormatter.ofPattern("HH:mm")))
@@ -153,7 +164,11 @@ public class AppointmentService {
         User patient = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        List<Appointment> appointments = appointmentRepository.findByPatient(patient);
+        System.out.println("DEBUG: Fetching appointments for patient - Email: " + userEmail + ", ID: " + patient.getId());
+        
+        List<Appointment> appointments = appointmentRepository.findByPatientId(patient.getId());
+        
+        System.out.println("DEBUG: Found " + appointments.size() + " appointments for patient ID " + patient.getId());
 
         return appointments.stream()
                 .map(this::convertToResponse)
@@ -167,6 +182,8 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));
 
+        System.out.println("DEBUG: Cancelling appointment " + appointmentId + " with current status: " + appointment.getStatus());
+
         if (!appointment.getPatient().getId().equals(patient.getId())) {
             throw new RuntimeException("You can only cancel your own appointments");
         }
@@ -176,7 +193,8 @@ public class AppointmentService {
         }
 
         appointment.setStatus(AppointmentStatus.CANCELLED);
-        appointmentRepository.save(appointment);
+        appointment = appointmentRepository.save(appointment);
+        System.out.println("DEBUG: Appointment " + appointmentId + " status updated to: " + appointment.getStatus());
     }
 
     private AppointmentResponse convertToResponse(Appointment appointment) {
@@ -200,5 +218,106 @@ public class AppointmentService {
                 .status(appointment.getStatus().name())
                 .notes(appointment.getNotes())
                 .build();
+    }
+
+    public List<AppointmentResponse> getDoctorAppointments(Long doctorId, String status) {
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new RuntimeException("Doctor not found"));
+
+        List<Appointment> appointments;
+        if (status != null && !status.equals("all")) {
+            if (status.equals("active")) {
+                // Active appointments include CONFIRMED and PENDING
+                List<Appointment> confirmedAppointments = appointmentRepository.findByDoctorAndStatus(doctor, AppointmentStatus.CONFIRMED);
+                List<Appointment> pendingAppointments = appointmentRepository.findByDoctorAndStatus(doctor, AppointmentStatus.PENDING);
+                appointments = new java.util.ArrayList<>(confirmedAppointments);
+                appointments.addAll(pendingAppointments);
+            } else {
+                try {
+                    AppointmentStatus appointmentStatus = AppointmentStatus.valueOf(status.toUpperCase());
+                    appointments = appointmentRepository.findByDoctorAndStatus(doctor, appointmentStatus);
+                } catch (IllegalArgumentException e) {
+                    throw new RuntimeException("Invalid status. Must be: all, active, confirmed, cancelled, or pending");
+                }
+            }
+        } else {
+            appointments = appointmentRepository.findByDoctor(doctor);
+        }
+
+        return appointments.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<AppointmentResponse> getDoctorAppointmentsByUserId(Long userId, String status) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        Doctor doctor = doctorRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new RuntimeException("Doctor profile not found"));
+
+        List<Appointment> appointments;
+        if (status != null && !status.equals("all")) {
+            if (status.equals("active")) {
+                // Active appointments include CONFIRMED and PENDING
+                List<Appointment> confirmedAppointments = appointmentRepository.findByDoctorAndStatus(doctor, AppointmentStatus.CONFIRMED);
+                List<Appointment> pendingAppointments = appointmentRepository.findByDoctorAndStatus(doctor, AppointmentStatus.PENDING);
+                appointments = new java.util.ArrayList<>(confirmedAppointments);
+                appointments.addAll(pendingAppointments);
+            } else {
+                try {
+                    AppointmentStatus appointmentStatus = AppointmentStatus.valueOf(status.toUpperCase());
+                    appointments = appointmentRepository.findByDoctorAndStatus(doctor, appointmentStatus);
+                } catch (IllegalArgumentException e) {
+                    throw new RuntimeException("Invalid status. Must be: all, active, confirmed, cancelled, or pending");
+                }
+            }
+        } else {
+            appointments = appointmentRepository.findByDoctor(doctor);
+        }
+
+        return appointments.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<AppointmentResponse> getDoctorAppointmentsByEmail(String userEmail, String status) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        Doctor doctor = doctorRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new RuntimeException("Doctor profile not found"));
+
+        List<Appointment> appointments;
+        if (status != null && !status.equals("all")) {
+            try {
+                AppointmentStatus appointmentStatus = AppointmentStatus.valueOf(status.toUpperCase());
+                appointments = appointmentRepository.findByDoctorAndStatus(doctor, appointmentStatus);
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Invalid status. Must be: all, confirmed, completed, or cancelled");
+            }
+        } else {
+            appointments = appointmentRepository.findByDoctor(doctor);
+        }
+
+        return appointments.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    public AppointmentResponse updateAppointmentStatus(Long appointmentId, String status) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+
+        try {
+            AppointmentStatus newStatus = AppointmentStatus.valueOf(status.toUpperCase());
+            appointment.setStatus(newStatus);
+            appointment.setUpdatedAt(LocalDateTime.now());
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid status. Must be: confirmed, completed, or cancelled");
+        }
+
+        Appointment updatedAppointment = appointmentRepository.save(appointment);
+        return convertToResponse(updatedAppointment);
     }
 }

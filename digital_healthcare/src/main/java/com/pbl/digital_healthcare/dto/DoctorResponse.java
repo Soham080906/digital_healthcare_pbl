@@ -6,28 +6,27 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class AppointmentResponse {
+public class DoctorResponse {
     private Long id;
-    private PatientInfo patient;
-    private DoctorInfo doctor;
+    private UserInfo user;
+    private String specialization;
+    private String licenseNumber;
+    private Integer experience;
+    private String education;
+    private String phone;
     private ClinicInfo clinic;
-    private LocalDateTime slot;
-    private String status;
-    private String notes;
 
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class PatientInfo {
+    public static class UserInfo {
         private Long id;
         private String name;
         private String email;
@@ -38,19 +37,13 @@ public class AppointmentResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class DoctorInfo {
-        private Long id;
-        private String name;
-        private String specialization;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ClinicInfo {
         private Long id;
         private String name;
+        private String location;
+        private String phone;
+        private String email;
+        private String hours;
+        private String services;
     }
 }

@@ -8,6 +8,7 @@ import com.pbl.digital_healthcare.models.User;
 import com.pbl.digital_healthcare.repository.ClinicRepository;
 import com.pbl.digital_healthcare.repository.DoctorRepossitory;
 import com.pbl.digital_healthcare.repository.UserRepository;
+import com.pbl.digital_healthcare.security.JwtUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -17,13 +18,15 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final DoctorRepossitory doctorRepossitory;
     private final ClinicRepository clinicRepository;
+    private final JwtUtil jwtUtil;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, DoctorRepossitory doctorRepossitory
-    , ClinicRepository clinicRepository){
+    , ClinicRepository clinicRepository, JwtUtil jwtUtil){
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.doctorRepossitory = doctorRepossitory;
         this.clinicRepository = clinicRepository;
+        this.jwtUtil = jwtUtil;
     }
 
     public MessageResponse register(RegisterRequest request){
@@ -72,8 +75,10 @@ public class AuthService {
                 role(user.getRole().name()).
                 build();
 
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+        
         return AuthResponse.builder().
-                token("Dummy Token").
+                token(token).
                 user(userResponse).build();
 
     }

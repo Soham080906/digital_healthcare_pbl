@@ -8,13 +8,16 @@ import com.pbl.digital_healthcare.models.User;
 import com.pbl.digital_healthcare.repository.UserRepository;
 import com.pbl.digital_healthcare.service.AppointmentService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/appointments")
-@CrossOrigin
 public class AppointmentController {
     private final AppointmentService appointmentService;
     private final UserRepository userRepository;
@@ -25,12 +28,11 @@ public class AppointmentController {
     }
 
     @PostMapping
-    public ResponseEntity<?> bookAppointment(
-            @RequestBody AppointmentRequest request,
-            @RequestHeader("Authorization") String authorization) {
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<?> bookAppointment(@RequestBody AppointmentRequest request) {
         try {
-            String token = authorization.replace("Bearer ", "");
-            String userEmail = extractUserEmailFromToken(token);
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userEmail = authentication.getName();
             AppointmentResponse response = appointmentService.bookAppointment(request, userEmail);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
@@ -53,11 +55,11 @@ public class AppointmentController {
     }
 
     @GetMapping("/my-appointments")
-    public ResponseEntity<?> getUserAppointments(
-            @RequestHeader("Authorization") String authorization) {
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<?> getUserAppointments() {
         try {
-            String token = authorization.replace("Bearer ", "");
-            String userEmail = extractUserEmailFromToken(token);
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userEmail = authentication.getName();
             List<AppointmentResponse> appointments = appointmentService.getUserAppointments(userEmail);
             return ResponseEntity.ok(appointments);
         } catch (RuntimeException e) {
@@ -66,12 +68,11 @@ public class AppointmentController {
     }
 
     @DeleteMapping("/{appointmentId}")
-    public ResponseEntity<?> cancelAppointment(
-            @PathVariable Long appointmentId,
-            @RequestHeader("Authorization") String authorization) {
+    @PreAuthorize("hasRole('PATIENT')")
+    public ResponseEntity<?> cancelAppointment(@PathVariable Long appointmentId) {
         try {
-            String token = authorization.replace("Bearer ", "");
-            String userEmail = extractUserEmailFromToken(token);
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userEmail = authentication.getName();
             appointmentService.cancelAppointment(appointmentId, userEmail);
             return ResponseEntity.ok(new MessageResponse("Appointment cancelled successfully"));
         } catch (RuntimeException e) {
@@ -79,33 +80,74 @@ public class AppointmentController {
         }
     }
 
-    private String extractUserEmailFromToken(String token) {
-        // For development/testing - accept any token and return a real patient user
-        // In production, this should validate JWT token and extract actual user email
-        if (token != null && !token.isEmpty()) {
-            return getExistingPatientUser();
+    @GetMapping("/doctor")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<?> getDoctorAppointments(
+            @RequestParam(required = false) String status) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userEmail = authentication.getName();
+            List<AppointmentResponse> appointments = appointmentService.getDoctorAppointmentsByEmail(userEmail, status);
+            return ResponseEntity.ok(appointments);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
         }
-        throw new RuntimeException("Invalid token");
     }
-    
-    private String getExistingPatientUser() {
-        // Find any existing patient user in the database
-        // Try to find a user with PATIENT role first
-        List<User> patients = userRepository.findAll().stream()
-                .filter(user -> user.getRole() == com.pbl.digital_healthcare.models.Role.PATIENT)
-                .limit(1)
-                .collect(java.util.stream.Collectors.toList());
-        
-        if (!patients.isEmpty()) {
-            return patients.get(0).getEmail();
+
+    @GetMapping("/doctor/{doctorId}")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<?> getDoctorAppointmentsById(
+            @PathVariable Long doctorId,
+            @RequestParam(required = false) String status) {
+        try {
+            List<AppointmentResponse> appointments = appointmentService.getDoctorAppointments(doctorId, status);
+            return ResponseEntity.ok(appointments);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
         }
-        
-        // If no patient found, try any user
-        List<User> allUsers = userRepository.findAll();
-        if (!allUsers.isEmpty()) {
-            return allUsers.get(0).getEmail();
+    }
+
+    @GetMapping("/doctor/user/{userId}")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<?> getDoctorAppointmentsByUserId(
+            @PathVariable Long userId,
+            @RequestParam(required = false) String status) {
+        try {
+            List<AppointmentResponse> appointments = appointmentService.getDoctorAppointmentsByUserId(userId, status);
+            return ResponseEntity.ok(appointments);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
         }
-        
-        throw new RuntimeException("No users found in database. Please register a user first using /api/auth/register");
+    }
+
+    @PostMapping("/{appointmentId}/status")
+    @PreAuthorize("hasRole('DOCTOR') or hasRole('ADMIN')")
+    public ResponseEntity<?> updateAppointmentStatus(
+            @PathVariable Long appointmentId,
+            @RequestBody Map<String, String> statusUpdate) {
+        try {
+            String status = statusUpdate.get("status");
+            if (status == null || (!status.equals("confirmed") && !status.equals("completed") && !status.equals("cancelled"))) {
+                return ResponseEntity.badRequest().body(new MessageResponse("Invalid status. Must be: confirmed, completed, or cancelled"));
+            }
+            
+            AppointmentResponse response = appointmentService.updateAppointmentStatus(appointmentId, status);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{appointmentId}/cancel")
+    @PreAuthorize("hasRole('PATIENT') or hasRole('DOCTOR') or hasRole('ADMIN')")
+    public ResponseEntity<?> cancelAppointmentByRole(@PathVariable Long appointmentId) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userEmail = authentication.getName();
+            appointmentService.cancelAppointment(appointmentId, userEmail);
+            return ResponseEntity.ok(new MessageResponse("Appointment cancelled successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new MessageResponse(e.getMessage()));
+        }
     }
 }

@@ -38,5 +38,7 @@ public class Appointment {
 
     private String notes;
 
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
 }
