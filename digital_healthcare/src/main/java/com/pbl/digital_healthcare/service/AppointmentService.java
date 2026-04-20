@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.LocalTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -51,55 +53,39 @@ public class AppointmentService {
 
         LocalDateTime slot = null;
         try {
-            // Try multiple datetime formats
             String slotStr = request.getSlot();
             System.out.println("DEBUG: Received slot format: " + slotStr);
-            
-            if (slotStr.contains("T") && slotStr.contains(":")) {
-                if (slotStr.endsWith("Z")) {
-                    // ISO format with UTC timezone: 2024-12-25T10:00:00.000Z
-                    if (slotStr.contains(".")) {
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-                        slot = LocalDateTime.parse(slotStr, formatter);
-                    } else {
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-                        slot = LocalDateTime.parse(slotStr, formatter);
-                    }
-                } else if (slotStr.contains(".")) {
-                    // ISO format with milliseconds: 2024-12-25T10:00:00.000
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
-                    slot = LocalDateTime.parse(slotStr, formatter);
-                } else if (slotStr.split("T")[1].split(":").length == 3) {
-                    // ISO format with seconds: 2024-12-25T10:00:00
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-                    slot = LocalDateTime.parse(slotStr, formatter);
-                } else {
-                    // ISO format without seconds: 2024-12-25T10:00
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
-                    slot = LocalDateTime.parse(slotStr, formatter);
-                }
-            } else if (slotStr.contains(" ")) {
-                // Format: 2024-12-25 10:00:00
+
+            // 1) Most common backend-friendly formats first
+            if (slotStr.contains(" ")) {
+                // Format: yyyy-MM-dd HH:mm[:ss]
                 String[] parts = slotStr.split(" ");
                 if (parts.length == 2) {
                     String[] timeParts = parts[1].split(":");
                     if (timeParts.length == 3) {
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                        slot = LocalDateTime.parse(slotStr, formatter);
+                        slot = LocalDateTime.parse(slotStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
                     } else if (timeParts.length == 2) {
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-                        slot = LocalDateTime.parse(slotStr, formatter);
+                        slot = LocalDateTime.parse(slotStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
                     }
-                } else {
-                    throw new RuntimeException("Invalid space-separated datetime format");
+                }
+            } else if (slotStr.contains("T")) {
+                // 2) ISO local datetime: yyyy-MM-ddTHH:mm[:ss[.SSS]]
+                try {
+                    slot = LocalDateTime.parse(slotStr);
+                } catch (Exception ignored) {
+                    // 3) ISO datetime with zone/offset: ...Z or ...+05:30
+                    try {
+                        slot = OffsetDateTime.parse(slotStr).toLocalDateTime();
+                    } catch (Exception ignoredOffset) {
+                        slot = ZonedDateTime.parse(slotStr).toLocalDateTime();
+                    }
                 }
             } else {
-                // Try ISO as fallback
                 slot = LocalDateTime.parse(slotStr);
             }
         } catch (Exception e) {
             System.out.println("DEBUG: Parse error: " + e.getMessage());
-            throw new RuntimeException("Invalid slot format: '" + request.getSlot() + "'. Expected formats: yyyy-MM-ddTHH:mm:ss, yyyy-MM-dd HH:mm:ss, yyyy-MM-ddTHH:mm, or ISO format with optional timezone");
+            throw new RuntimeException("Invalid slot format: '" + request.getSlot() + "'. Expected ISO datetime like yyyy-MM-ddTHH:mm[:ss], with optional timezone/offset, or yyyy-MM-dd HH:mm[:ss]");
         }
         
         if (slot == null) {
@@ -119,7 +105,7 @@ public class AppointmentService {
                 .doctor(doctor)
                 .clinic(clinic)
                 .slot(slot)
-                .status(AppointmentStatus.CONFIRMED)
+                .status(AppointmentStatus.PENDING)
                 .notes(request.getNotes())
                 .build();
 
@@ -137,17 +123,19 @@ public class AppointmentService {
 
         System.out.println("DEBUG: Searching for appointments between " + startOfDay + " and " + endOfDay);
         
-        List<Appointment> appointments = appointmentRepository.findByDoctorAndSlotBetweenAndStatus(
-                doctor, startOfDay, endOfDay, AppointmentStatus.CONFIRMED);
+        List<Appointment> appointments = appointmentRepository.findByDoctorAndSlotBetweenAndStatusIn(
+                doctor, startOfDay, endOfDay, List.of(AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING));
 
-        System.out.println("DEBUG: Found " + appointments.size() + " confirmed appointments for doctor " + doctorId + " on " + date);
+        System.out.println("DEBUG: Found " + appointments.size() + " booked appointments (CONFIRMED+PENDING) for doctor " + doctorId + " on " + date);
+        appointments.forEach(apt -> 
+            System.out.println("DEBUG: Booked appointment ID:" + apt.getId() + " at " + apt.getSlot() + " with status " + apt.getStatus()));
         
         // Also check all appointments (including cancelled) for debugging
         List<Appointment> allAppointments = appointmentRepository.findByDoctorAndSlotBetween(
                 doctor, startOfDay, endOfDay);
         System.out.println("DEBUG: Total appointments (all statuses): " + allAppointments.size());
         allAppointments.forEach(apt -> 
-            System.out.println("DEBUG: Appointment at " + apt.getSlot() + " with status " + apt.getStatus()));
+            System.out.println("DEBUG: All appointment ID:" + apt.getId() + " at " + apt.getSlot() + " with status " + apt.getStatus()));
 
         List<String> bookedSlots = appointments.stream()
                 .map(appointment -> appointment.getSlot().format(DateTimeFormatter.ofPattern("HH:mm")))
@@ -306,18 +294,24 @@ public class AppointmentService {
     }
 
     public AppointmentResponse updateAppointmentStatus(Long appointmentId, String status) {
+        System.out.println("DEBUG: Updating appointment " + appointmentId + " to status: " + status);
+        
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));
 
+        System.out.println("DEBUG: Current appointment status: " + appointment.getStatus() + ", slot: " + appointment.getSlot() + ", ID: " + appointment.getId());
+        
         try {
             AppointmentStatus newStatus = AppointmentStatus.valueOf(status.toUpperCase());
             appointment.setStatus(newStatus);
             appointment.setUpdatedAt(LocalDateTime.now());
+            
+            Appointment updatedAppointment = appointmentRepository.save(appointment);
+            System.out.println("DEBUG: Appointment " + appointmentId + " updated to status: " + updatedAppointment.getStatus());
+            
+            return convertToResponse(updatedAppointment);
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid status. Must be: confirmed, completed, or cancelled");
+            throw new RuntimeException("Invalid status. Must be: pending, confirmed, completed, or cancelled");
         }
-
-        Appointment updatedAppointment = appointmentRepository.save(appointment);
-        return convertToResponse(updatedAppointment);
     }
 }

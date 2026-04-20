@@ -8,6 +8,7 @@ import com.pbl.digital_healthcare.repository.ClinicRepository;
 import com.pbl.digital_healthcare.repository.DoctorRepossitory;
 import com.pbl.digital_healthcare.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -18,20 +19,24 @@ public class DataInitializer implements CommandLineRunner {
     private final DoctorRepossitory doctorRepossitory;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JdbcTemplate jdbcTemplate;
 
     public DataInitializer(ClinicRepository clinicRepository, 
                           DoctorRepossitory doctorRepossitory,
                           UserRepository userRepository,
-                          PasswordEncoder passwordEncoder) {
+                          PasswordEncoder passwordEncoder,
+                          JdbcTemplate jdbcTemplate) {
         this.clinicRepository = clinicRepository;
         this.doctorRepossitory = doctorRepossitory;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public void run(String... args) throws Exception {
         System.out.println("=== DataInitializer Starting ===");
+        ensureAppointmentStatusConstraint();
         System.out.println("Clinic count: " + clinicRepository.count());
         System.out.println("Doctor count: " + doctorRepossitory.count());
         System.out.println("User count: " + userRepository.count());
@@ -51,6 +56,30 @@ public class DataInitializer implements CommandLineRunner {
         }
         
         System.out.println("=== DataInitializer Complete ===");
+    }
+
+    private void ensureAppointmentStatusConstraint() {
+        try {
+            jdbcTemplate.execute("""
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1
+                        FROM pg_constraint
+                        WHERE conname = 'appointments_status_check'
+                    ) THEN
+                        ALTER TABLE appointments DROP CONSTRAINT appointments_status_check;
+                    END IF;
+
+                    ALTER TABLE appointments
+                    ADD CONSTRAINT appointments_status_check
+                    CHECK (LOWER(status::text) IN ('pending', 'confirmed', 'completed', 'cancelled'));
+                END $$;
+                """);
+            System.out.println("appointments_status_check constraint updated");
+        } catch (Exception e) {
+            System.out.println("Could not update appointments_status_check constraint: " + e.getMessage());
+        }
     }
 
     private void initializeClinics() {

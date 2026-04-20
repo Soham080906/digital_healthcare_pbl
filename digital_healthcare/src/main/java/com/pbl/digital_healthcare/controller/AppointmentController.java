@@ -14,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @RestController
@@ -127,8 +128,16 @@ public class AppointmentController {
             @RequestBody Map<String, String> statusUpdate) {
         try {
             String status = statusUpdate.get("status");
-            if (status == null || (!status.equals("confirmed") && !status.equals("completed") && !status.equals("cancelled"))) {
-                return ResponseEntity.badRequest().body(new MessageResponse("Invalid status. Must be: confirmed, completed, or cancelled"));
+            if (status != null) {
+                status = status.trim().toLowerCase(Locale.ROOT);
+                // Allow both "complete" and "completed" from clients
+                if ("complete".equals(status)) {
+                    status = "completed";
+                }
+            }
+
+            if (status == null || (!status.equals("confirmed") && !status.equals("completed") && !status.equals("cancelled") && !status.equals("pending"))) {
+                return ResponseEntity.badRequest().body(new MessageResponse("Invalid status. Must be: pending, confirmed, completed, or cancelled"));
             }
             
             AppointmentResponse response = appointmentService.updateAppointmentStatus(appointmentId, status);
