@@ -294,7 +294,10 @@
                     if (appointmentsResponse.ok) {
                         const appointments = await appointmentsResponse.json();
                         console.log('✅ Doctor Appointments API Response:', appointments);
-                        const activeAppointments = appointments.filter(apt => apt.status !== 'cancelled' && apt.status !== 'cancel');
+                        const activeAppointments = appointments.filter(apt => {
+                            const status = (apt.status || '').toLowerCase();
+                            return status !== 'cancelled' && status !== 'cancel' && status !== 'completed';
+                        });
                         console.log('Active doctor appointments:', activeAppointments.length);
                         document.getElementById('appointmentCount').textContent = activeAppointments.length;
                         displayDoctorPatientAppointments(appointments);
@@ -447,12 +450,153 @@
                         </div>
                         ` : ''}
                     </div>
+                    <div class="appointment-actions">
+                        ${normalizedStatus === 'pending' ? `
+                            <button class="btn btn-success btn-sm approve-appointment" data-appointment-id="${appointmentId}">
+                                <i class="fas fa-check"></i> Approve
+                            </button>
+                            <button class="btn btn-danger btn-sm reject-appointment" data-appointment-id="${appointmentId}">
+                                <i class="fas fa-times"></i> Reject
+                            </button>
+                        ` : normalizedStatus === 'confirmed' ? `
+                            <button class="btn btn-primary btn-sm complete-appointment" data-appointment-id="${appointmentId}">
+                                <i class="fas fa-check-double"></i> Mark Complete
+                            </button>
+                        ` : ''}
+                    </div>
                 `;
                 doctorAppointmentsList.appendChild(appointmentCard);
                 console.log(`✅ Appointment ${index + 1} added to DOM`);
             });
             
             console.log('✅ All appointments rendered successfully!');
+            
+            // Add event listeners for appointment actions
+            addAppointmentActionListeners();
+        }
+
+        // Add event listeners for appointment action buttons
+        function addAppointmentActionListeners() {
+            // Approve appointment
+            document.querySelectorAll('.approve-appointment').forEach(button => {
+                button.addEventListener('click', approveAppointment);
+            });
+            
+            // Reject appointment
+            document.querySelectorAll('.reject-appointment').forEach(button => {
+                button.addEventListener('click', rejectAppointment);
+            });
+            
+            // Complete appointment
+            document.querySelectorAll('.complete-appointment').forEach(button => {
+                button.addEventListener('click', completeAppointment);
+            });
+        }
+
+        // Approve appointment
+        async function approveAppointment(e) {
+            const appointmentId = e.target.closest('.approve-appointment').getAttribute('data-appointment-id');
+            
+            if (!confirm('Are you sure you want to approve this appointment?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ status: 'confirmed' })
+                });
+                
+                if (response.ok) {
+                    window.showToast('Appointment approved successfully', 'success');
+                    loadDashboardData();
+                } else {
+                    window.showToast('Failed to approve appointment', 'error');
+                }
+            } catch (err) {
+                console.error('Error approving appointment:', err);
+                window.showToast('Error approving appointment', 'error');
+            }
+        }
+
+        // Reject appointment
+        async function rejectAppointment(e) {
+            const appointmentId = e.target.closest('.reject-appointment').getAttribute('data-appointment-id');
+            console.log('DEBUG: Rejecting appointment ID:', appointmentId);
+            
+            if (!confirm('Are you sure you want to reject this appointment?')) {
+                return;
+            }
+            
+            try {
+                console.log('DEBUG: Sending rejection request for appointment:', appointmentId);
+                const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ status: 'cancelled' })
+                });
+                
+                console.log('DEBUG: Rejection response status:', response.status);
+                if (response.ok) {
+                    const responseData = await response.json();
+                    console.log('DEBUG: Rejection response data:', responseData);
+                    window.showToast('Appointment rejected successfully', 'success');
+                    // Set flag to refresh slots on booking page
+                    localStorage.setItem('slotsNeedRefresh', 'true');
+                    loadDashboardData();
+                } else {
+                    const errorText = await response.text();
+                    console.error('DEBUG: Rejection failed:', response.status, errorText);
+                    window.showToast('Failed to reject appointment', 'error');
+                }
+            } catch (err) {
+                console.error('Error rejecting appointment:', err);
+                window.showToast('Error rejecting appointment', 'error');
+            }
+        }
+
+        // Complete appointment
+        async function completeAppointment(e) {
+            const appointmentId = e.target.closest('.complete-appointment').getAttribute('data-appointment-id');
+            
+            if (!confirm('Are you sure you want to mark this appointment as completed?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ status: 'completed' })
+                });
+                
+                if (response.ok) {
+                    window.showToast('Appointment marked as completed', 'success');
+                    loadDashboardData();
+                } else {
+                    let message = 'Failed to complete appointment';
+                    try {
+                        const errorData = await response.json();
+                        message = errorData?.message || errorData?.error || message;
+                    } catch (parseError) {
+                        // Keep fallback message if non-JSON error response
+                    }
+                    window.showToast(message, 'error');
+                }
+            } catch (err) {
+                console.error('Error completing appointment:', err);
+                window.showToast('Error completing appointment', 'error');
+            }
         }
 
         // Get status configuration
@@ -498,7 +642,10 @@
                 if (value === 'all') {
                     card.style.display = 'block';
                 } else if (value === 'active') {
-                    card.style.display = card.classList.contains('cancelled-appointment') ? 'none' : 'block';
+                    const statusBadge = card.querySelector('.status-badge');
+                    const isCancelled = statusBadge && statusBadge.classList.contains('cancelled');
+                    const isCompleted = statusBadge && statusBadge.classList.contains('completed');
+                    card.style.display = (isCancelled || isCompleted) ? 'none' : 'block';
                 } else if (value === 'cancelled') {
                     card.style.display = card.classList.contains('cancelled-appointment') ? 'block' : 'none';
                 }

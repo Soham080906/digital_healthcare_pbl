@@ -264,12 +264,23 @@
                         <p><i class="fas fa-hospital"></i> ${clinicName}</p>
                     </div>
                     <div class="appointment-actions">
-                        ${appointment.status === 'cancelled' ? `
+                        ${appointment.status === 'CANCELLED' || appointment.status === 'cancelled' ? `
                             <span class="cancelled-status">
                                 <i class="fas fa-times-circle"></i> Cancelled
                             </span>
+                        ` : appointment.status === 'pending' || appointment.status === 'PENDING' ? `
+                            <span class="pending-status">
+                                <i class="fas fa-clock"></i> Pending Approval
+                            </span>
+                            <button class="btn btn-danger btn-sm cancel-appointment" data-appointment-id="${appointment.id}">
+                                <i class="fas fa-times"></i> Cancel Request
+                            </button>
+                        ` : appointment.status === 'completed' || appointment.status === 'COMPLETED' ? `
+                            <span class="completed-status">
+                                <i class="fas fa-check-double"></i> Completed
+                            </span>
                         ` : `
-                            <button class="btn btn-danger btn-sm cancel-appointment" data-appointment-id="${appointment._id || appointment.id}">
+                            <button class="btn btn-danger btn-sm cancel-appointment" data-appointment-id="${appointment.id}">
                                 <i class="fas fa-times"></i> Cancel
                             </button>
                         `}
@@ -352,7 +363,7 @@
                     const appointments = await appointmentsResponse.json();
                     const upcomingAppointments = appointments.filter(apt => {
                         const appointmentDate = new Date(apt.slot);
-                        return appointmentDate > new Date() && apt.status !== 'cancelled';
+                        return appointmentDate > new Date() && apt.status !== 'CANCELLED' && apt.status !== 'cancelled';
                     });
                     
                     document.getElementById('notificationBadge').textContent = upcomingAppointments.length;
@@ -393,13 +404,17 @@
 
         // Cancel appointment
         async function cancelAppointment(e) {
-            const appointmentId = e.target.closest('.cancel-appointment').getAttribute('data-appointment-id');
+            const button = e.target.closest('.cancel-appointment');
+            const appointmentId = button.getAttribute('data-appointment-id');
+            
+            console.log('Cancel button clicked, appointmentId:', appointmentId, 'type:', typeof appointmentId);
             
             if (!confirm('Are you sure you want to cancel this appointment?')) {
                 return;
             }
             
             try {
+                console.log('Making DELETE request to:', `http://localhost:8080/api/appointments/${appointmentId}`);
                 const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}`, {
                     method: 'DELETE',
                     headers: {
@@ -407,10 +422,16 @@
                     }
                 });
                 
+                console.log('Response status:', response.status, 'ok:', response.ok);
+                
                 if (response.ok) {
                     window.showToast('Appointment cancelled successfully', 'success');
+                    // Set flag to refresh slots on booking page
+                    localStorage.setItem('slotsNeedRefresh', 'true');
                     loadDashboardData();
                 } else {
+                    const errorText = await response.text();
+                    console.log('Error response:', errorText);
                     window.showToast('Failed to cancel appointment', 'error');
                 }
             } catch (err) {

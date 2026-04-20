@@ -130,11 +130,17 @@
     <script src="script.js"></script>
     <script src="api-client.js"></script>
     <script>
-        // Check if user is authenticated (required for booking)
-        // For appointments page, we allow viewing but require login for booking
+        // Check if user is authenticated and is a patient (required for booking)
         function checkAuthForBooking() {
             const token = localStorage.getItem('token');
-            return !!token;
+            const userRole = localStorage.getItem('userRole');
+            
+            if (!token) {
+                return false;
+            }
+            
+            // Only patients can book appointments
+            return userRole === 'PATIENT';
         }
 
         // Redirect to login with return URL for booking
@@ -331,13 +337,18 @@
                     const data = await response.json();
                     console.debug('booked-slots data:', data);
                     const bookedSlots = data.bookedSlots || data.booked_slots || [];
+                    console.debug('Extracted booked slots:', bookedSlots);
                     
                     // Generate all possible time slots and mark booked ones
                     const allSlots = generateAllTimeSlots();
+                    console.debug('All generated slots:', allSlots);
                     const availableSlots = allSlots.map(slot => ({
                         time: slot,
                         available: !bookedSlots.includes(slot)
                     }));
+                    
+                    console.debug('Available slots:', availableSlots.filter(s => s.available));
+                    console.debug('Booked slots:', availableSlots.filter(s => !s.available));
                     
                     displayTimeSlots(availableSlots);
                 } else {
@@ -481,13 +492,19 @@
 
         // Book appointment functionality
         document.getElementById('bookAppointment').addEventListener('click', async () => {
-            // Check authentication first
+            // Check authentication and role first
             if (!checkAuthForBooking()) {
-                window.showToast('Please login to book an appointment', 'error');
-                setTimeout(() => {
-                    redirectToLogin();
-                }, 1500);
-                return;
+                const userRole = localStorage.getItem('userRole');
+                if (userRole === 'DOCTOR') {
+                    window.showToast('Doctors cannot book appointments. Only patients can book appointments.', 'error');
+                    return;
+                } else {
+                    window.showToast('Please login as a patient to book an appointment', 'error');
+                    setTimeout(() => {
+                        redirectToLogin();
+                    }, 1500);
+                    return;
+                }
             }
 
             const clinic = document.getElementById('clinic').value;
@@ -512,7 +529,7 @@
                 return;
             }
 
-            const slot = new Date(`${date}T${time}`);
+            const slot = `${date}T${time}:00`;
             
             // Get the button for loading state
             const button = document.getElementById('bookAppointment');
@@ -523,7 +540,7 @@
                 const result = await window.apiClient.apiPost('/appointments', {
                     clinic,
                     doctor,
-                    slot: slot.toISOString(),
+                    slot,
                     notes
                 });
 
@@ -558,14 +575,25 @@
             }
         });
 
-        // Hide login/register links if logged in
+        // Hide login/register links if logged in and check user role
         window.addEventListener('DOMContentLoaded', function() {
             const token = localStorage.getItem('token');
+            const userRole = localStorage.getItem('userRole');
+            
             if (token) {
                 const loginLink = document.getElementById('loginLink');
                 const registerLink = document.getElementById('registerLink');
                 if (loginLink) loginLink.style.display = 'none';
                 if (registerLink) registerLink.style.display = 'none';
+                
+                // If user is a doctor, redirect them away from appointment booking
+                if (userRole === 'DOCTOR') {
+                    window.showToast('Doctors cannot book appointments. Redirecting to dashboard...', 'info');
+                    setTimeout(() => {
+                        window.location.href = 'doctor-dashboard.html';
+                    }, 2000);
+                    return;
+                }
             }
         });
 
@@ -581,14 +609,55 @@
             }
         }
 
+        // Force refresh slots periodically when page is active
+        function forceRefreshSlots() {
+            if (selectedDoctor && selectedDate && !document.hidden) {
+                console.log('Periodic slot refresh check');
+                loadAvailableSlots();
+            }
+        }
+
+        // Add a refresh button for manual slot refresh
+        function addRefreshButton() {
+            const timeSlotsSection = document.querySelector('.time-slots-section');
+            if (timeSlotsSection && !document.getElementById('refreshSlotsBtn')) {
+                const refreshBtn = document.createElement('button');
+                refreshBtn.id = 'refreshSlotsBtn';
+                refreshBtn.className = 'btn btn-secondary';
+                refreshBtn.innerHTML = '<i class="fas fa-sync"></i> Refresh Slots';
+                refreshBtn.style.marginBottom = '1rem';
+                refreshBtn.onclick = () => {
+                    const originalHTML = refreshBtn.innerHTML;
+                    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+                    refreshBtn.disabled = true;
+                    
+                    loadAvailableSlots().then(() => {
+                        refreshBtn.innerHTML = originalHTML;
+                        refreshBtn.disabled = false;
+                        window.showToast('Slots refreshed!', 'success');
+                    }).catch(() => {
+                        refreshBtn.innerHTML = originalHTML;
+                        refreshBtn.disabled = false;
+                        window.showToast('Failed to refresh slots', 'error');
+                    });
+                };
+                
+                timeSlotsSection.insertBefore(refreshBtn, timeSlotsSection.firstChild);
+            }
+        }
+
         // Handle page visibility changes and refresh slots accordingly
         let refreshInterval;
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden) {
                 // Check immediately when page becomes visible
                 checkSlotsRefresh();
-                // Check more frequently (every 2 seconds) when page is visible
-                refreshInterval = setInterval(checkSlotsRefresh, 2000);
+                forceRefreshSlots();
+                // Check more frequently (every 3 seconds) when page is visible
+                refreshInterval = setInterval(() => {
+                    checkSlotsRefresh();
+                    forceRefreshSlots();
+                }, 3000);
             } else {
                 // Clear frequent checking when page is hidden
                 if (refreshInterval) {
@@ -612,8 +681,14 @@
             loadBookingData();
             checkSlotsRefresh();
             
-            // Fallback: Check for slot refresh every 5 seconds as backup
-            setInterval(checkSlotsRefresh, 5000);
+            // Add refresh button after a short delay
+            setTimeout(addRefreshButton, 2000);
+            
+            // Start periodic refresh of slots (every 5 seconds)
+            setInterval(() => {
+                checkSlotsRefresh();
+                forceRefreshSlots();
+            }, 5000);
         });
         // Refresh time slots function
         function refreshTimeSlots() {
