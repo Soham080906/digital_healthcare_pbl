@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Dashboard - ClinicPlus</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-heartbeat"></i>
+                <span>ClinicPlus</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="#patients" class="nav-link">Patients</a></li>
+                <li><a href="#clinics" class="nav-link">Clinics</a></li>
+                <li><a href="#" class="nav-link" id="logoutBtn">Logout</a></li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard -->
+    <div class="dashboard">
+        <div class="dashboard-header">
+            <div class="container">
+                <h1 id="welcomeMessage">Welcome, Dr. Unknown</h1>
+                <p id="dashboardSubtitle">Manage your practice and patient appointments</p>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <div class="container">
+                <!-- Quick Stats -->
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <i class="fas fa-calendar-check"></i>
+                            <h3>Patient Appointments</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="stat-number" id="appointmentCount">0</div>
+                            <div class="stat-label">Scheduled</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <i class="fas fa-user-injured"></i>
+                            <h3>Total Patients</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="stat-number" id="patientCount">0</div>
+                            <div class="stat-label">Registered</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <i class="fas fa-hospital"></i>
+                            <h3>My Clinic</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="stat-label" id="clinicName">Not assigned</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Doctor Profile Section -->
+                <section id="doctorProfileSection" class="dashboard-section">
+                    <h2>My Profile</h2>
+                    <div class="doctor-profile-card">
+                        <div class="profile-header">
+                            <div class="profile-avatar">
+                                <i class="fas fa-user-md"></i>
+                            </div>
+                            <div class="profile-info">
+                                <h3 id="doctorName">Dr. Unknown</h3>
+                                <p id="doctorSpecialization">Specialization</p>
+                                <p id="doctorClinic">Clinic</p>
+                            </div>
+                        </div>
+                        <div class="profile-details">
+                            <div class="detail-item">
+                                <span class="label">License:</span>
+                                <span id="doctorLicense">Not provided</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">Experience:</span>
+                                <span id="doctorExperience">0 years</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">Education:</span>
+                                <span id="doctorEducation">Not provided</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="label">Phone:</span>
+                                <span id="doctorPhone">Not provided</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary" id="editProfileBtn">
+                            <i class="fas fa-edit"></i>
+                            Edit Profile
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Edit Profile Modal -->
+                <div id="editProfileModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Edit Profile</h3>
+                            <span class="close" id="closeEditModal">&times;</span>
+                        </div>
+                        <form id="editProfileForm">
+                            <div class="form-group">
+                                <label for="editName">Full Name</label>
+                                <input type="text" id="editName" name="name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editSpecialization">Specialization</label>
+                                <select id="editSpecialization" name="specialization" required>
+                                    <option value="">Select specialization</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="editLicense">Medical License Number</label>
+                                <input type="text" id="editLicense" name="licenseNumber">
+                            </div>
+                            <div class="form-group">
+                                <label for="editExperience">Years of Experience</label>
+                                <input type="number" id="editExperience" name="experience" min="0" max="50">
+                            </div>
+                            <div class="form-group">
+                                <label for="editEducation">Education</label>
+                                <input type="text" id="editEducation" name="education" placeholder="e.g., MBBS, MD, PhD">
+                            </div>
+                            <div class="form-group">
+                                <label for="editPhone">Phone Number</label>
+                                <input type="tel" id="editPhone" name="phone" maxlength="10" pattern="[0-9]*">
+                            </div>
+                            <div class="form-group">
+                                <label for="editClinic">Select Clinic</label>
+                                <select id="editClinic" name="clinic">
+                                    <option value="">Choose a clinic</option>
+                                </select>
+                            </div>
+                            <div class="modal-actions">
+                                <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Patient Appointments Section -->
+                <section class="dashboard-section">
+                    <div class="section-header">
+                        <div>
+                            <h2>Patient Appointments</h2>
+                            <p class="section-description">View and manage appointments booked by patients with you</p>
+                        </div>
+                        <div class="section-actions">
+                            <div class="filter-controls">
+                                <label for="appointmentFilter">Filter:</label>
+                                <select id="appointmentFilter" class="filter-select">
+                                    <option value="all">All Appointments</option>
+                                    <option value="active">Active Only</option>
+                                    <option value="cancelled">Cancelled Only</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="appointments-list" id="doctorAppointmentsList">
+                        <!-- Doctor's patient appointments will be loaded here -->
+                    </div>
+                </section>
+
+                <!-- Clinics Section -->
+                <section id="clinics" class="dashboard-section">
+                    <h2>Available Clinics</h2>
+                    <div class="clinics-grid" id="clinicsGrid">
+                        <!-- Clinics will be loaded here -->
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="api-client.js"></script>
+    <script>
+        // Check authentication and role on page load
+        window.apiClient.requireAuth();
+        const userRole = (localStorage.getItem('userRole') || '').toLowerCase();
+        if (userRole !== 'doctor') {
+            window.location.href = 'patient-dashboard.html';
+        }
+
+        // Logout button handler
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            if (confirm('Are you sure you want to logout?')) {
+                window.apiClient.logout();
+            }
+        });
+
+        // Initialize dashboard
+        const userName = localStorage.getItem('userName');
+        document.getElementById('welcomeMessage').textContent = `Welcome, Dr. ${userName}`;
+
+        // Load doctor profile
+        async function fetchDoctorProfileAndLoad() {
+            const userId = localStorage.getItem('userId');
+            const token = localStorage.getItem('token');
+            if (!userId || !token) {
+                console.error('Missing userId or token for doctor profile');
+                loadDoctorProfile();
+                return;
+            }
+            
+            try {
+                const response = await fetch(`https://digital-healthcare-pbl.onrender.com/api/doctors/user/${userId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const profile = await response.json();
+                    localStorage.setItem('doctorProfile', JSON.stringify(profile));
+                    console.log('Doctor profile loaded successfully:', profile);
+                } else {
+                    console.error('Failed to fetch doctor profile:', response.status);
+                }
+            } catch (err) {
+                console.error('Failed to fetch doctor profile:', err);
+            }
+            loadDoctorProfile();
+        }
+
+        // Display doctor profile
+        function loadDoctorProfile() {
+            const doctorProfile = localStorage.getItem('doctorProfile');
+            if (doctorProfile) {
+                try {
+                    const profile = JSON.parse(doctorProfile);
+                    document.getElementById('doctorName').textContent = profile.user.name || 'Dr. Unknown';
+                    document.getElementById('doctorSpecialization').textContent = profile.specialization || 'General Physician';
+                    document.getElementById('doctorClinic').textContent = profile.clinic ? profile.clinic.name : 'Not assigned';
+                    document.getElementById('clinicName').textContent = profile.clinic ? profile.clinic.name : 'Not assigned';
+                    document.getElementById('doctorLicense').textContent = profile.licenseNumber || 'Not provided';
+                    document.getElementById('doctorExperience').textContent = `${profile.experience || 0} years`;
+                    document.getElementById('doctorEducation').textContent = profile.education || 'Not provided';
+                    document.getElementById('doctorPhone').textContent = profile.phone || 'Not provided';
+                } catch (error) {
+                    console.error('Error parsing doctor profile:', error);
+                }
+            }
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                const token = localStorage.getItem('token');
+                const userId = localStorage.getItem('userId');
+                const userName = localStorage.getItem('userName');
+                
+                console.log('=== DOCTOR DASHBOARD DEBUG INFO ===');
+                console.log('Doctor User ID:', userId);
+                console.log('Doctor Name:', userName);
+                console.log('Token exists:', !!token);
+                console.log('API Endpoint: /api/appointments/doctor');
+                console.log('================================');
+                
+                // Load doctor's patient appointments
+                try {
+                    const appointmentsResponse = await fetch(`https://digital-healthcare-pbl.onrender.com/api/appointments/doctor`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    console.log('Doctor Appointments Response Status:', appointmentsResponse.status);
+                    
+                    if (appointmentsResponse.ok) {
+                        const appointments = await appointmentsResponse.json();
+                        console.log('✅ Doctor Appointments API Response:', appointments);
+                        const activeAppointments = appointments.filter(apt => {
+                            const status = (apt.status || '').toLowerCase();
+                            return status !== 'cancelled' && status !== 'cancel' && status !== 'completed';
+                        });
+                        console.log('Active doctor appointments:', activeAppointments.length);
+                        document.getElementById('appointmentCount').textContent = activeAppointments.length;
+                        displayDoctorPatientAppointments(appointments);
+                        console.log('Doctor appointments loaded:', appointments.length);
+                    } else {
+                        const errorText = await appointmentsResponse.text();
+                        console.warn('❌ Failed to load doctor appointments:', appointmentsResponse.status, errorText);
+                        // Fallback to mock data
+                        const mockAppointments = generateMockDoctorAppointments();
+                        console.log('Using mock data. Total mock appointments:', mockAppointments.length);
+                        document.getElementById('appointmentCount').textContent = mockAppointments.length;
+                        displayDoctorPatientAppointments(mockAppointments);
+                        window.showToast('Showing demo appointments (endpoint not yet implemented)', 'info');
+                    }
+                } catch (err) {
+                    console.error('❌ Error fetching doctor appointments:', err);
+                    const mockAppointments = generateMockDoctorAppointments();
+                    console.log('Using mock data (error). Total mock appointments:', mockAppointments.length);
+                    document.getElementById('appointmentCount').textContent = mockAppointments.length;
+                    displayDoctorPatientAppointments(mockAppointments);
+                }
+
+                // Load clinics
+                try {
+                    const clinicsResponse = await fetch('https://digital-healthcare-pbl.onrender.com/api/clinics');
+                    if (clinicsResponse.ok) {
+                        const clinics = await clinicsResponse.json();
+                        populateClinicsGrid(clinics);
+                    }
+                } catch (err) {
+                    console.error('Error fetching clinics:', err);
+                }
+
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+
+        // Generate mock doctor appointments for demonstration
+        function generateMockDoctorAppointments() {
+            return [
+                {
+                    _id: '1',
+                    patient: { name: 'John Smith', email: 'john@example.com' },
+                    slot: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                    status: 'confirmed',
+                    notes: 'Regular checkup',
+                    clinic: { name: 'City General Hospital' }
+                },
+                {
+                    _id: '2',
+                    patient: { name: 'Sarah Johnson', email: 'sarah@example.com' },
+                    slot: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+                    status: 'pending',
+                    notes: 'Follow-up consultation',
+                    clinic: { name: 'City General Hospital' }
+                }
+            ];
+        }
+
+        // Display doctor's patient appointments
+        function displayDoctorPatientAppointments(appointments) {
+            console.log('📋 displayDoctorPatientAppointments called with:', appointments);
+            console.log('Number of appointments received:', appointments.length);
+            
+            const doctorAppointmentsList = document.getElementById('doctorAppointmentsList');
+            console.log('doctorAppointmentsList element found:', !!doctorAppointmentsList);
+            
+            if (!doctorAppointmentsList) {
+                console.error('❌ CRITICAL: doctorAppointmentsList element NOT FOUND!');
+                return;
+            }
+            
+            doctorAppointmentsList.innerHTML = '';
+            
+            if (!appointments || appointments.length === 0) {
+                console.warn('⚠️ No appointments to display');
+                doctorAppointmentsList.innerHTML = '<p class="no-data">No patient appointments found.</p>';
+                return;
+            }
+            
+            console.log('🔄 Processing', appointments.length, 'appointments...');
+            
+            appointments.forEach((appointment, index) => {
+                console.log(`Processing appointment ${index + 1}:`, appointment);
+                
+                const appointmentCard = document.createElement('div');
+                
+                // Normalize status to lowercase for comparison
+                const normalizedStatus = (appointment.status || 'pending').toLowerCase();
+                console.log(`Appointment ${index + 1} - Original status: "${appointment.status}" → Normalized: "${normalizedStatus}"`);
+                
+                appointmentCard.className = `appointment-card doctor-appointment-card ${normalizedStatus === 'cancelled' ? 'cancelled-appointment' : ''}`;
+                
+                const appointmentDate = new Date(appointment.slot);
+                const formattedDate = appointmentDate.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                const formattedTime = appointmentDate.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                const statusConfig = getStatusConfig(normalizedStatus);
+                console.log(`Status config for "${normalizedStatus}":`, statusConfig);
+                
+                // Use id or _id whichever exists
+                const appointmentId = appointment._id || appointment.id;
+                const patientName = appointment.patient ? appointment.patient.name : 'Patient';
+                const patientEmail = appointment.patient ? appointment.patient.email : 'No email';
+                
+                console.log(`Appointment ${index + 1} - Patient: ${patientName}, Doctor: ${appointment.doctor?.name}, Date: ${formattedDate}`);
+                
+                appointmentCard.innerHTML = `
+                    <div class="appointment-header">
+                        <div class="patient-info">
+                            <div class="patient-main">
+                                <h3>${patientName}</h3>
+                                <p class="patient-email">
+                                    <i class="fas fa-envelope"></i>
+                                    ${patientEmail}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="status-badge ${normalizedStatus}">
+                            <i class="${statusConfig.icon}"></i>
+                            <span>${statusConfig.label}</span>
+                        </div>
+                    </div>
+                    <div class="appointment-details">
+                        <div class="detail-row">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>${formattedDate}</span>
+                        </div>
+                        <div class="detail-row">
+                            <i class="fas fa-clock"></i>
+                            <span>${formattedTime}</span>
+                        </div>
+                        <div class="detail-row">
+                            <i class="fas fa-hospital"></i>
+                            <span>${appointment.clinic ? appointment.clinic.name : 'Clinic'}</span>
+                        </div>
+                        ${appointment.notes ? `
+                        <div class="detail-row">
+                            <i class="fas fa-sticky-note"></i>
+                            <span>${appointment.notes}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="appointment-actions">
+                        ${normalizedStatus === 'pending' ? `
+                            <button class="btn btn-success btn-sm approve-appointment" data-appointment-id="${appointmentId}">
+                                <i class="fas fa-check"></i> Approve
+                            </button>
+                            <button class="btn btn-danger btn-sm reject-appointment" data-appointment-id="${appointmentId}">
+                                <i class="fas fa-times"></i> Reject
+                            </button>
+                        ` : normalizedStatus === 'confirmed' ? `
+                            <button class="btn btn-primary btn-sm complete-appointment" data-appointment-id="${appointmentId}">
+                                <i class="fas fa-check-double"></i> Mark Complete
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+                doctorAppointmentsList.appendChild(appointmentCard);
+                console.log(`✅ Appointment ${index + 1} added to DOM`);
+            });
+            
+            console.log('✅ All appointments rendered successfully!');
+            
+            // Add event listeners for appointment actions
+            addAppointmentActionListeners();
+        }
+
+        // Add event listeners for appointment action buttons
+        function addAppointmentActionListeners() {
+            // Approve appointment
+            document.querySelectorAll('.approve-appointment').forEach(button => {
+                button.addEventListener('click', approveAppointment);
+            });
+            
+            // Reject appointment
+            document.querySelectorAll('.reject-appointment').forEach(button => {
+                button.addEventListener('click', rejectAppointment);
+            });
+            
+            // Complete appointment
+            document.querySelectorAll('.complete-appointment').forEach(button => {
+                button.addEventListener('click', completeAppointment);
+            });
+        }
+
+        // Approve appointment
+        async function approveAppointment(e) {
+            const appointmentId = e.target.closest('.approve-appointment').getAttribute('data-appointment-id');
+            
+            if (!confirm('Are you sure you want to approve this appointment?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`https://digital-healthcare-pbl.onrender.com/api/appointments/${appointmentId}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ status: 'confirmed' })
+                });
+                
+                if (response.ok) {
+                    window.showToast('Appointment approved successfully', 'success');
+                    loadDashboardData();
+                } else {
+                    window.showToast('Failed to approve appointment', 'error');
+                }
+            } catch (err) {
+                console.error('Error approving appointment:', err);
+                window.showToast('Error approving appointment', 'error');
+            }
+        }
+
+        // Reject appointment
+        async function rejectAppointment(e) {
+            const appointmentId = e.target.closest('.reject-appointment').getAttribute('data-appointment-id');
+            console.log('DEBUG: Rejecting appointment ID:', appointmentId);
+            
+            if (!confirm('Are you sure you want to reject this appointment?')) {
+                return;
+            }
+            
+            try {
+                console.log('DEBUG: Sending rejection request for appointment:', appointmentId);
+                const response = await fetch(`https://digital-healthcare-pbl.onrender.com/api/appointments/${appointmentId}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ status: 'cancelled' })
+                });
+                
+                console.log('DEBUG: Rejection response status:', response.status);
+                if (response.ok) {
+                    const responseData = await response.json();
+                    console.log('DEBUG: Rejection response data:', responseData);
+                    window.showToast('Appointment rejected successfully', 'success');
+                    // Set flag to refresh slots on booking page
+                    localStorage.setItem('slotsNeedRefresh', 'true');
+                    loadDashboardData();
+                } else {
+                    const errorText = await response.text();
+                    console.error('DEBUG: Rejection failed:', response.status, errorText);
+                    window.showToast('Failed to reject appointment', 'error');
+                }
+            } catch (err) {
+                console.error('Error rejecting appointment:', err);
+                window.showToast('Error rejecting appointment', 'error');
+            }
+        }
+
+        // Complete appointment
+        async function completeAppointment(e) {
+            const appointmentId = e.target.closest('.complete-appointment').getAttribute('data-appointment-id');
+            
+            if (!confirm('Are you sure you want to mark this appointment as completed?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`https://digital-healthcare-pbl.onrender.com/api/appointments/${appointmentId}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ status: 'completed' })
+                });
+                
+                if (response.ok) {
+                    window.showToast('Appointment marked as completed', 'success');
+                    loadDashboardData();
+                } else {
+                    let message = 'Failed to complete appointment';
+                    try {
+                        const errorData = await response.json();
+                        message = errorData?.message || errorData?.error || message;
+                    } catch (parseError) {
+                        // Keep fallback message if non-JSON error response
+                    }
+                    window.showToast(message, 'error');
+                }
+            } catch (err) {
+                console.error('Error completing appointment:', err);
+                window.showToast('Error completing appointment', 'error');
+            }
+        }
+
+        // Get status configuration
+        function getStatusConfig(status) {
+            // Normalize status to lowercase for lookup
+            const normalizedStatus = (status || 'pending').toLowerCase();
+            const configs = {
+                'pending': { label: 'Pending', icon: 'fas fa-clock' },
+                'confirmed': { label: 'Confirmed', icon: 'fas fa-check-circle' },
+                'completed': { label: 'Completed', icon: 'fas fa-check-double' },
+                'cancelled': { label: 'Cancelled', icon: 'fas fa-times-circle' }
+            };
+            return configs[normalizedStatus] || configs['pending'];
+        }
+
+        // Populate clinics grid
+        function populateClinicsGrid(clinics) {
+            const clinicsGrid = document.getElementById('clinicsGrid');
+            clinicsGrid.innerHTML = '';
+            
+            clinics.forEach(clinic => {
+                const clinicCard = document.createElement('div');
+                clinicCard.className = 'clinic-card';
+                clinicCard.innerHTML = `
+                    <div class="clinic-icon">
+                        <i class="fas fa-hospital"></i>
+                    </div>
+                    <div class="clinic-info">
+                        <h3>${clinic.name}</h3>
+                        <p>${clinic.location}</p>
+                    </div>
+                `;
+                clinicsGrid.appendChild(clinicCard);
+            });
+        }
+
+        // Filter appointments
+        document.getElementById('appointmentFilter').addEventListener('change', function() {
+            const value = this.value;
+            const cards = document.querySelectorAll('.doctor-appointment-card');
+            
+            cards.forEach(card => {
+                if (value === 'all') {
+                    card.style.display = 'block';
+                } else if (value === 'active') {
+                    const statusBadge = card.querySelector('.status-badge');
+                    const isCancelled = statusBadge && statusBadge.classList.contains('cancelled');
+                    const isCompleted = statusBadge && statusBadge.classList.contains('completed');
+                    card.style.display = (isCancelled || isCompleted) ? 'none' : 'block';
+                } else if (value === 'cancelled') {
+                    card.style.display = card.classList.contains('cancelled-appointment') ? 'block' : 'none';
+                }
+            });
+        });
+
+        // Modal functionality
+        const modal = document.getElementById('editProfileModal');
+        const editBtn = document.getElementById('editProfileBtn');
+        const closeBtn = document.getElementById('closeEditModal');
+        const cancelBtn = document.getElementById('cancelEdit');
+
+        editBtn.addEventListener('click', () => {
+            modal.style.display = 'block';
+            populateEditForm();
+        });
+
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Populate edit form
+        async function populateEditForm() {
+            const doctorProfile = JSON.parse(localStorage.getItem('doctorProfile') || '{}');
+            document.getElementById('editName').value = doctorProfile.name || '';
+            document.getElementById('editSpecialization').value = doctorProfile.specialization || '';
+            document.getElementById('editLicense').value = doctorProfile.licenseNumber || '';
+            document.getElementById('editExperience').value = doctorProfile.experience || '';
+            document.getElementById('editEducation').value = doctorProfile.education || '';
+            document.getElementById('editPhone').value = doctorProfile.phone || '';
+            
+            // Load specializations
+            try {
+                const response = await fetch('https://digital-healthcare-pbl.onrender.com/api/specializations');
+                if (response.ok) {
+                    const specializations = await response.json();
+                    const select = document.getElementById('editSpecialization');
+                    select.innerHTML = '<option value="">Select specialization</option>';
+                    specializations.forEach(spec => {
+                        const option = document.createElement('option');
+                        option.value = spec;
+                        option.textContent = spec;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (err) {
+                console.error('Error loading specializations:', err);
+            }
+
+            // Load clinics
+            try {
+                const response = await fetch('https://digital-healthcare-pbl.onrender.com/api/clinics');
+                if (response.ok) {
+                    const clinics = await response.json();
+                    const select = document.getElementById('editClinic');
+                    select.innerHTML = '<option value="">Choose a clinic</option>';
+                    clinics.forEach(clinic => {
+                        const option = document.createElement('option');
+                        option.value = clinic.id ?? clinic._id;
+                        option.textContent = clinic.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (err) {
+                console.error('Error loading clinics:', err);
+            }
+        }
+
+        // Handle profile edit submission
+        document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const button = e.target.querySelector('button[type="submit"]');
+            const restoreButton = window.addLoadingState(button);
+            
+            const formData = new FormData(e.target);
+            
+            try {
+                const response = await fetch(`https://digital-healthcare-pbl.onrender.com/api/doctors/${localStorage.getItem('userId')}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        name: formData.get('name'),
+                        specialization: formData.get('specialization'),
+                        licenseNumber: formData.get('licenseNumber'),
+                        experience: formData.get('experience'),
+                        education: formData.get('education'),
+                        phone: formData.get('phone'),
+                        clinicId: formData.get('clinic') ? parseInt(formData.get('clinic')) : null
+                    })
+                });
+                
+                if (response.ok) {
+                    const updatedProfile = await response.json();
+                    localStorage.setItem('doctorProfile', JSON.stringify(updatedProfile));
+                    loadDoctorProfile();
+                    modal.style.display = 'none';
+                    window.showToast('Profile updated successfully!', 'success');
+                } else {
+                    window.showToast('Failed to update profile', 'error');
+                }
+            } catch (err) {
+                console.error('Error updating profile:', err);
+                window.showToast('Error updating profile', 'error');
+            }
+            
+            restoreButton();
+        });
+
+        // Load everything on page load
+        window.addEventListener('load', () => {
+            fetchDoctorProfileAndLoad();
+            loadDashboardData();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment - ClinicPlus</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-heartbeat"></i>
+                <span>ClinicPlus</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="login.html" class="nav-link btn-login" id="loginLink">Login</a></li>
+                <li><a href="register.html" class="nav-link btn-register" id="registerLink">Register</a></li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Appointment Booking Section -->
+    <div class="appointment-page">
+        <div class="container">
+            <div class="appointment-header">
+                <h1>Book Your Appointment</h1>
+                <p>Choose your preferred clinic, doctor, and time slot</p>
+            </div>
+
+            <div class="appointment-content">
+                <div class="booking-section">
+                    <div class="booking-form-large">
+                        <h2>Appointment Details</h2>
+                        
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="clinic">Select Clinic</label>
+                                <select id="clinic" name="clinic" required>
+                                    <option value="">Choose a clinic</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="doctor">Select Doctor</label>
+                                <select id="doctor" name="doctor" required>
+                                    <option value="">Choose a doctor</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="date">Appointment Date</label>
+                                <input type="date" id="date" name="date" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="time">Appointment Time</label>
+                                <input type="hidden" id="time" name="time" required>
+                                <div class="time-selection-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>Select a date and doctor to view available time slots</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Available Time Slots -->
+                        <div class="time-slots-section">
+                            <div class="slots-header">
+                                <h3>Available Time Slots</h3>
+                                <button type="button" class="btn btn-secondary btn-sm" id="refreshSlotsBtn" onclick="refreshTimeSlots()">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                            </div>
+                            <div class="time-slots-grid" id="timeSlotsGrid">
+                                <!-- Time slots will be populated here -->
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="notes">Additional Notes (Optional)</label>
+                            <textarea id="notes" name="notes" rows="4" placeholder="Any special requirements or notes for your appointment..."></textarea>
+                        </div>
+                        
+                        <button type="button" class="btn btn-primary btn-large" id="bookAppointment">
+                            <i class="fas fa-calendar-plus"></i>
+                            Book Appointment
+                        </button>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <div class="info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <h3>Appointment Duration</h3>
+                        <p>Standard appointments are 30 minutes.</p>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <h3>Booking Policy</h3>
+                        <p>Appointments can be booked in advance. 24-hour cancellation.</p>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-phone"></i>
+                        </div>
+                        <h3>Need Help?</h3>
+                        <p>Contact our support team at +91 8686658586 for assistance with booking.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="api-client.js"></script>
+    <script>
+        // Check if user is authenticated and is a patient (required for booking)
+        function checkAuthForBooking() {
+            const token = localStorage.getItem('token');
+            const userRole = localStorage.getItem('userRole');
+            
+            if (!token) {
+                return false;
+            }
+            
+            // Only patients can book appointments
+            return userRole === 'PATIENT';
+        }
+
+        // Redirect to login with return URL for booking
+        function redirectToLogin() {
+            window.location.href = 'login.html?return=appointments.html';
+        }
+
+        // Global variables
+        let allDoctors = [];
+        let selectedDate = '';
+        let selectedDoctor = '';
+        let availableSlots = [];
+
+        // Set minimum date to tomorrow (cannot book for today)
+        function setMinDate() {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1); // Start from tomorrow
+            
+            const dateInput = document.getElementById('date');
+            const yyyy = tomorrow.getFullYear();
+            const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+            const dd = String(tomorrow.getDate()).padStart(2, '0');
+            const minDate = `${yyyy}-${mm}-${dd}`;
+            
+            dateInput.min = minDate;
+            dateInput.value = minDate;
+            selectedDate = minDate;
+            
+            // Add event listener to prevent manual entry of today's date
+            dateInput.addEventListener('change', function() {
+                const selectedDateValue = new Date(this.value);
+                const todayDate = new Date();
+                todayDate.setHours(0, 0, 0, 0);
+                selectedDateValue.setHours(0, 0, 0, 0);
+                
+                if (selectedDateValue <= todayDate) {
+                    window.showToast('Appointments cannot be booked for today or past dates. Please select a future date.', 'error');
+                    this.value = minDate;
+                    selectedDate = minDate;
+                    return;
+                }
+                selectedDate = this.value;
+            });
+        }
+
+        // Load clinics and doctors
+        async function loadBookingData() {
+            try {
+                console.log('Loading booking data from backend...');
+                
+                // Load clinics
+                let clinics = [];
+                try {
+                    const clinicsResponse = await fetch('https://digital-healthcare-pbl.onrender.com/api/clinics', {
+                        method: 'GET',
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    if (clinicsResponse.ok) {
+                        clinics = await clinicsResponse.json();
+                        console.log('Clinics loaded:', clinics);
+                        populateClinicSelect(clinics);
+                    } else {
+                        throw new Error(`Clinics API returned ${clinicsResponse.status}`);
+                    }
+                } catch (clinicErr) {
+                    console.warn('Failed to load clinics, using mock data:', clinicErr);
+                    clinics = getMockClinics();
+                    populateClinicSelect(clinics);
+                }
+
+                // Load doctors
+                try {
+                    const doctorsResponse = await fetch('https://digital-healthcare-pbl.onrender.com/api/doctors', {
+                        method: 'GET',
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    if (doctorsResponse.ok) {
+                        allDoctors = await doctorsResponse.json();
+                        console.log('Doctors loaded:', allDoctors);
+                        populateDoctorSelect([]);
+                    } else {
+                        throw new Error(`Doctors API returned ${doctorsResponse.status}`);
+                    }
+                } catch (docErr) {
+                    console.warn('Failed to load doctors, using mock data:', docErr);
+                    allDoctors = getMockDoctors();
+                    populateDoctorSelect([]);
+                }
+            } catch (error) {
+                console.error('Error loading booking data:', error);
+                // Fallback to mock data for demonstration
+                loadMockData();
+            }
+        }
+
+        function getMockClinics() {
+            return [
+                { id: '1', _id: '1', name: 'City General Hospital' },
+                { id: '2', _id: '2', name: 'Community Medical Center' },
+                { id: '3', _id: '3', name: 'Downtown Clinic' }
+            ];
+        }
+
+        function getMockDoctors() {
+            return [
+                { id: '1', _id: '1', user: { name: 'Dr. Sarah Johnson' }, specialization: 'Cardiologist', clinic: { id: '1', _id: '1' } },
+                { id: '2', _id: '2', user: { name: 'Dr. Michael Chen' }, specialization: 'Pediatrician', clinic: { id: '1', _id: '1' } },
+                { id: '3', _id: '3', user: { name: 'Dr. Emily Davis' }, specialization: 'Dermatologist', clinic: { id: '2', _id: '2' } },
+                { id: '4', _id: '4', user: { name: 'Dr. Robert Wilson' }, specialization: 'General Physician', clinic: { id: '3', _id: '3' } }
+            ];
+        }
+
+        function loadMockData() {
+            console.log('Loading mock data...');
+            const mockClinics = getMockClinics();
+            populateClinicSelect(mockClinics);
+
+            allDoctors = getMockDoctors();
+            populateDoctorSelect([]);
+        }
+        
+
+        function populateClinicSelect(clinics) {
+            const clinicSelect = document.getElementById('clinic');
+            clinicSelect.innerHTML = '<option value="">Choose a clinic</option>';
+            clinics.forEach(clinic => {
+                const option = document.createElement('option');
+                option.value = clinic.id ?? clinic._id;
+                option.textContent = clinic.name;
+                clinicSelect.appendChild(option);
+            });
+            // Add event listener to filter doctors when clinic changes
+            clinicSelect.addEventListener('change', function() {
+                const selectedClinicId = this.value;
+                if (selectedClinicId) {
+                    const filteredDoctors = allDoctors.filter(doc => {
+                        if (!doc) return false;
+                        // doc.clinic may be an object with id/_id or a primitive id
+                        const docClinic = doc.clinic;
+                        const docClinicId = docClinic && (docClinic.id ?? docClinic._id) || docClinic;
+                        return docClinicId != null && String(docClinicId) === String(selectedClinicId);
+                    });
+                    populateDoctorSelect(filteredDoctors);
+                } else {
+                    populateDoctorSelect([]);
+                }
+            });
+        }
+
+        function populateDoctorSelect(doctors) {
+            const doctorSelect = document.getElementById('doctor');
+            doctorSelect.innerHTML = '<option value="">Choose a doctor</option>';
+            // ensure doctors is an array
+            const docs = Array.isArray(doctors) ? doctors : (doctors ? [doctors] : []);
+            console.debug('populateDoctorSelect: doctors count', docs.length);
+            docs.forEach(doctor => {
+                const option = document.createElement('option');
+                option.value = doctor.id ?? doctor._id;
+                option.textContent = `${doctor.user.name} - ${doctor.specialization}`;
+                doctorSelect.appendChild(option);
+            });
+            
+            // Add event listener to load available slots when doctor changes
+            doctorSelect.addEventListener('change', function() {
+                selectedDoctor = this.value;
+                console.debug('doctor selected:', selectedDoctor);
+                // clear previous time slots while loading
+                document.getElementById('timeSlotsGrid').innerHTML = '<div class="no-slots-message">Loading available time slots...</div>';
+                if (selectedDoctor && selectedDate) {
+                    loadAvailableSlots();
+                }
+            });
+        }
+
+        // Load available time slots for selected doctor and date
+        async function loadAvailableSlots() {
+            console.debug('loadAvailableSlots called for doctor', selectedDoctor, 'date', selectedDate);
+            if (!selectedDoctor || !selectedDate) {
+                // Clear time slots if no doctor or date selected
+                const timeSlotsGrid = document.getElementById('timeSlotsGrid');
+                timeSlotsGrid.innerHTML = '<div class="no-slots-message">Please select a date and doctor to view available time slots</div>';
+                return;
+            }
+
+            try {
+                // Fetch booked slots from backend
+                const response = await fetch(`https://digital-healthcare-pbl.onrender.com/api/appointments/booked-slots/${selectedDoctor}/${selectedDate}`, {
+                    cache: 'no-cache' // Ensure fresh data, no browser caching
+                });
+                console.debug('booked-slots response status:', response.status);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.debug('booked-slots data:', data);
+                    const bookedSlots = data.bookedSlots || data.booked_slots || [];
+                    console.debug('Extracted booked slots:', bookedSlots);
+                    
+                    // Generate all possible time slots and mark booked ones
+                    const allSlots = generateAllTimeSlots();
+                    console.debug('All generated slots:', allSlots);
+                    const availableSlots = allSlots.map(slot => ({
+                        time: slot,
+                        available: !bookedSlots.includes(slot)
+                    }));
+                    
+                    console.debug('Available slots:', availableSlots.filter(s => s.available));
+                    console.debug('Booked slots:', availableSlots.filter(s => !s.available));
+                    
+                    displayTimeSlots(availableSlots);
+                } else {
+                    console.error('Error fetching booked slots:', response.statusText);
+                    // Fallback to mock data
+                    const mockSlots = generateMockAvailability();
+                    displayTimeSlots(mockSlots);
+                }
+            } catch (error) {
+                console.error('Error loading available slots:', error);
+                // Fallback to mock data
+                const mockSlots = generateMockAvailability();
+                displayTimeSlots(mockSlots);
+            }
+        }
+
+        function generateAllTimeSlots() {
+            const slots = [];
+            const startTime = 9; // 9 AM
+            const endTime = 17; // 5 PM
+            const interval = 30; // 30 minutes
+            
+            for (let hour = startTime; hour < endTime; hour++) {
+                for (let minute = 0; minute < 60; minute += interval) {
+                    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                    slots.push(timeString);
+                }
+            }
+            return slots;
+        }
+
+        function generateMockAvailability() {
+            const slots = [];
+            const startTime = 9; // 9 AM
+            const endTime = 17; // 5 PM
+            const interval = 30; // 30 minutes
+            
+            for (let hour = startTime; hour < endTime; hour++) {
+                for (let minute = 0; minute < 60; minute += interval) {
+                    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                    // Randomly mark some slots as unavailable
+                    const isAvailable = Math.random() > 0.3; // 70% chance of being available
+                    slots.push({
+                        time: timeString,
+                        available: isAvailable
+                    });
+                }
+            }
+            return slots;
+        }
+
+        // Display time slots with availability
+        function displayTimeSlots(slots) {
+            const timeSlotsGrid = document.getElementById('timeSlotsGrid');
+            timeSlotsGrid.innerHTML = '';
+            
+            const availableSlots = slots.filter(slot => slot.available);
+            const bookedSlots = slots.filter(slot => !slot.available);
+            
+            if (availableSlots.length === 0) {
+                timeSlotsGrid.innerHTML = `
+                    <div class="no-slots-message">
+                        <i class="fas fa-calendar-times"></i>
+                        <p>No available time slots for this date. Please try another date or doctor.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            slots.forEach(slot => {
+                const timeSlot = document.createElement('div');
+                timeSlot.className = `time-slot ${slot.available ? 'available' : 'booked'}`;
+                timeSlot.setAttribute('data-time', slot.time);
+                timeSlot.innerHTML = `
+                    <span class="time">${slot.time}</span>
+                    <span class="status ${slot.available ? 'available' : 'booked'}">
+                        ${slot.available ? 'Available' : 'Booked'}
+                    </span>
+                `;
+                
+                if (slot.available) {
+                    timeSlot.addEventListener('click', () => selectTimeSlot(slot.time));
+                }
+                
+                timeSlotsGrid.appendChild(timeSlot);
+            });
+        }
+
+        // Select time slot
+        function selectTimeSlot(time) {
+            // Remove previous selection
+            document.querySelectorAll('.time-slot.selected').forEach(slot => {
+                slot.classList.remove('selected');
+            });
+            
+            // Add selection to clicked slot
+            const clickedSlot = document.querySelector(`.time-slot[data-time="${time}"]`);
+            if (clickedSlot) {
+                clickedSlot.classList.add('selected');
+            }
+            
+            // Update time input
+            document.getElementById('time').value = time;
+            
+            // Show success message
+            window.showToast(`Time slot ${time} selected!`, 'success');
+        }
+
+        // Generate basic time slots (fallback)
+        function generateTimeSlots() {
+            const timeSlotsGrid = document.getElementById('timeSlotsGrid');
+            timeSlotsGrid.innerHTML = '';
+            
+            const startTime = 9; // 9 AM
+            const endTime = 17; // 5 PM
+            const interval = 30; // 30 minutes
+            
+            for (let hour = startTime; hour < endTime; hour++) {
+                for (let minute = 0; minute < 60; minute += interval) {
+                    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                    const timeSlot = document.createElement('div');
+                    timeSlot.className = 'time-slot available';
+                    timeSlot.setAttribute('data-time', timeString);
+                    timeSlot.innerHTML = `
+                        <span class="time">${timeString}</span>
+                        <span class="status available">Available</span>
+                    `;
+                    timeSlot.addEventListener('click', () => selectTimeSlot(timeString));
+                    timeSlotsGrid.appendChild(timeSlot);
+                }
+            }
+        }
+
+        // Date change handler
+        document.getElementById('date').addEventListener('change', function() {
+            selectedDate = this.value;
+            if (selectedDoctor && selectedDate) {
+                loadAvailableSlots();
+            }
+        });
+
+        // Book appointment functionality
+        document.getElementById('bookAppointment').addEventListener('click', async () => {
+            // Check authentication and role first
+            if (!checkAuthForBooking()) {
+                const userRole = localStorage.getItem('userRole');
+                if (userRole === 'DOCTOR') {
+                    window.showToast('Doctors cannot book appointments. Only patients can book appointments.', 'error');
+                    return;
+                } else {
+                    window.showToast('Please login as a patient to book an appointment', 'error');
+                    setTimeout(() => {
+                        redirectToLogin();
+                    }, 1500);
+                    return;
+                }
+            }
+
+            const clinic = document.getElementById('clinic').value;
+            const doctor = document.getElementById('doctor').value;
+            const date = document.getElementById('date').value;
+            const time = document.getElementById('time').value;
+            const notes = document.getElementById('notes').value;
+
+            if (!clinic || !doctor || !date || !time) {
+                window.showToast('Please select a clinic, doctor, date, and time slot', 'error');
+                return;
+            }
+
+            // Additional validation: Check if date is not today or in the past
+            const selectedDateValue = new Date(date);
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+            selectedDateValue.setHours(0, 0, 0, 0);
+            
+            if (selectedDateValue <= todayDate) {
+                window.showToast('Appointments cannot be booked for today or past dates. Please select a future date.', 'error');
+                return;
+            }
+
+            const slot = `${date}T${time}:00`;
+            
+            // Get the button for loading state
+            const button = document.getElementById('bookAppointment');
+            const restoreButton = window.addLoadingState(button);
+
+            try {
+                // Use api-client for the request with JWT token
+                const result = await window.apiClient.apiPost('/appointments', {
+                    clinic,
+                    doctor,
+                    slot,
+                    notes
+                });
+
+                if (result) {
+                    window.showToast('Appointment booked successfully!', 'success');
+                    
+                    // Clear the selected time slot
+                    document.getElementById('time').value = '';
+                    document.querySelectorAll('.time-slot.selected').forEach(slot => {
+                        slot.classList.remove('selected');
+                    });
+                    
+                    // Clear the notes
+                    document.getElementById('notes').value = '';
+                    
+                    // Refresh time slots to show the newly booked slot as unavailable
+                    if (selectedDoctor && selectedDate) {
+                        setTimeout(() => {
+                            loadAvailableSlots();
+                        }, 1000); // Wait 1 second for backend transaction to commit
+                    }
+                    
+                    restoreButton();
+                } else {
+                    // Error already handled by api-client
+                    restoreButton();
+                }
+            } catch (error) {
+                console.error('Error booking appointment:', error);
+                window.showToast('An error occurred while booking the appointment.', 'error');
+                restoreButton();
+            }
+        });
+
+        // Hide login/register links if logged in and check user role
+        window.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            const userRole = localStorage.getItem('userRole');
+            
+            if (token) {
+                const loginLink = document.getElementById('loginLink');
+                const registerLink = document.getElementById('registerLink');
+                if (loginLink) loginLink.style.display = 'none';
+                if (registerLink) registerLink.style.display = 'none';
+                
+                // If user is a doctor, redirect them away from appointment booking
+                if (userRole === 'DOCTOR') {
+                    window.showToast('Doctors cannot book appointments. Redirecting to dashboard...', 'info');
+                    setTimeout(() => {
+                        window.location.href = 'doctor-dashboard.html';
+                    }, 2000);
+                    return;
+                }
+            }
+        });
+
+        // Check if slots need refresh (due to cancellation from another page)
+        function checkSlotsRefresh() {
+            if (localStorage.getItem('slotsNeedRefresh') === 'true') {
+                localStorage.removeItem('slotsNeedRefresh');
+                if (selectedDoctor && selectedDate) {
+                    console.log('Refreshing slots due to appointment cancellation');
+                    loadAvailableSlots();
+                    window.showToast('Time slots updated - cancelled appointments are now available!', 'info');
+                }
+            }
+        }
+
+        // Force refresh slots periodically when page is active
+        function forceRefreshSlots() {
+            if (selectedDoctor && selectedDate && !document.hidden) {
+                console.log('Periodic slot refresh check');
+                loadAvailableSlots();
+            }
+        }
+
+        // Add a refresh button for manual slot refresh
+        function addRefreshButton() {
+            const timeSlotsSection = document.querySelector('.time-slots-section');
+            if (timeSlotsSection && !document.getElementById('refreshSlotsBtn')) {
+                const refreshBtn = document.createElement('button');
+                refreshBtn.id = 'refreshSlotsBtn';
+                refreshBtn.className = 'btn btn-secondary';
+                refreshBtn.innerHTML = '<i class="fas fa-sync"></i> Refresh Slots';
+                refreshBtn.style.marginBottom = '1rem';
+                refreshBtn.onclick = () => {
+                    const originalHTML = refreshBtn.innerHTML;
+                    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+                    refreshBtn.disabled = true;
+                    
+                    loadAvailableSlots().then(() => {
+                        refreshBtn.innerHTML = originalHTML;
+                        refreshBtn.disabled = false;
+                        window.showToast('Slots refreshed!', 'success');
+                    }).catch(() => {
+                        refreshBtn.innerHTML = originalHTML;
+                        refreshBtn.disabled = false;
+                        window.showToast('Failed to refresh slots', 'error');
+                    });
+                };
+                
+                timeSlotsSection.insertBefore(refreshBtn, timeSlotsSection.firstChild);
+            }
+        }
+
+        // Handle page visibility changes and refresh slots accordingly
+        let refreshInterval;
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                // Check immediately when page becomes visible
+                checkSlotsRefresh();
+                forceRefreshSlots();
+                // Check more frequently (every 3 seconds) when page is visible
+                refreshInterval = setInterval(() => {
+                    checkSlotsRefresh();
+                    forceRefreshSlots();
+                }, 3000);
+            } else {
+                // Clear frequent checking when page is hidden
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                }
+            }
+        });
+
+        // Initialize page - wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Initializing appointments page...');
+            setMinDate();
+            
+            // Show initial message for time slots
+            const timeSlotsGrid = document.getElementById('timeSlotsGrid');
+            if (timeSlotsGrid) {
+                timeSlotsGrid.innerHTML = '<div class="no-slots-message">Loading clinics and doctors...</div>';
+            }
+            
+            // Load booking data
+            loadBookingData();
+            checkSlotsRefresh();
+            
+            // Add refresh button after a short delay
+            setTimeout(addRefreshButton, 2000);
+            
+            // Start periodic refresh of slots (every 5 seconds)
+            setInterval(() => {
+                checkSlotsRefresh();
+                forceRefreshSlots();
+            }, 5000);
+        });
+        // Refresh time slots function
+        function refreshTimeSlots() {
+            if (selectedDoctor && selectedDate) {
+                console.log('Manual refresh of time slots');
+                const refreshBtn = document.getElementById('refreshSlotsBtn');
+                const originalHTML = refreshBtn.innerHTML;
+                refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+                refreshBtn.disabled = true;
+                
+                loadAvailableSlots().then(() => {
+                    refreshBtn.innerHTML = originalHTML;
+                    refreshBtn.disabled = false;
+                    window.showToast('Time slots refreshed successfully!', 'success');
+                }).catch(() => {
+                    refreshBtn.innerHTML = originalHTML;
+                    refreshBtn.disabled = false;
+                    window.showToast('Failed to refresh time slots', 'error');
+                });
+            } else {
+                window.showToast('Please select a doctor and date first', 'info');
+            }
+        }
+    </script>
+
+    <style>
+        .appointment-page {
+            padding-top: 100px;
+            min-height: 100vh;
+            background: #f8fafc;
+        }
+
+        .appointment-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .appointment-header h1 {
+            font-size: 2.5rem;
+            color: #1e293b;
+            margin-bottom: 1rem;
+        }
+
+        .appointment-header p {
+            color: #64748b;
+            font-size: 1.1rem;
+        }
+
+        .appointment-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .booking-form-large {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .booking-form-large h2 {
+            margin-bottom: 2rem;
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        .btn-large {
+            width: 100%;
+            padding: 1.2rem;
+            font-size: 1.1rem;
+        }
+
+        .info-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .info-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+
+        .info-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .info-card h3 {
+            margin-bottom: 0.5rem;
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        .info-card p {
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .time-slots-section {
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: #f8fafc;
+            border-radius: 15px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .time-slots-section h3 {
+            margin-bottom: 1rem;
+            color: #1e293b;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .slots-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .slots-header h3 {
+            margin: 0;
+        }
+
+        .time-slots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+
+        .time-slot {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .time-slot.available:hover {
+            border-color: #2563eb;
+            background: #eff6ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.15);
+        }
+
+        .time-slot.selected {
+            border-color: #2563eb;
+            background: #dbeafe;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .time-slot.booked {
+            cursor: not-allowed;
+            opacity: 0.6;
+            background: #f1f5f9;
+            border-color: #e5e7eb;
+            position: relative;
+        }
+
+        .time-slot.booked::after {
+            content: "✕";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: #dc2626;
+            font-weight: bold;
+            background: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .time-selection-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        .time-selection-info i {
+            color: #3b82f6;
+        }
+
+        .no-slots-message {
+            text-align: center;
+            padding: 2rem;
+            color: #64748b;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 2px dashed #cbd5e1;
+        }
+
+        .no-slots-message i {
+            font-size: 2rem;
+            color: #dc2626;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .no-slots-message p {
+            margin: 0;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .time-slot .time {
+            display: block;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.25rem;
+        }
+
+        .time-slot .status {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 15px;
+            font-weight: 500;
+        }
+
+        .status.available {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status.booked {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        @media (max-width: 768px) {
+            .appointment-content {
+                grid-template-columns: 1fr;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .time-slots-grid {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+        }
+    </style>
+</body>
+</html> 
