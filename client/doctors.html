@@ -92,9 +92,9 @@
         async function loadDoctors() {
             try {
                 const [doctorsResponse, clinicsResponse, specializationsResponse] = await Promise.all([
-                    fetch('http://localhost:8080/api/doctors'),
-                    fetch('http://localhost:8080/api/clinics'),
-                    fetch('http://localhost:8080/api/specializations')
+                    fetch('https://digital-healthcare-pbl.onrender.com/api/doctors'),
+                    fetch('https://digital-healthcare-pbl.onrender.com/api/clinics'),
+                    fetch('https://digital-healthcare-pbl.onrender.com/api/specializations')
                 ]);
 
                 allDoctors = await doctorsResponse.json();

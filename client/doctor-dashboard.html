@@ -230,7 +230,7 @@
             }
             
             try {
-                const response = await fetch(`http://localhost:8080/api/doctors/user/${userId}`, {
+                const response = await fetch(`https://digital-healthcare-pbl.onrender.com/api/doctors/user/${userId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
@@ -283,7 +283,7 @@
                 
                 // Load doctor's patient appointments
                 try {
-                    const appointmentsResponse = await fetch(`http://localhost:8080/api/appointments/doctor`, {
+                    const appointmentsResponse = await fetch(`https://digital-healthcare-pbl.onrender.com/api/appointments/doctor`, {
                         headers: {
                             'Authorization': `Bearer ${token}`
                         }
@@ -322,7 +322,7 @@
 
                 // Load clinics
                 try {
-                    const clinicsResponse = await fetch('http://localhost:8080/api/clinics');
+                    const clinicsResponse = await fetch('https://digital-healthcare-pbl.onrender.com/api/clinics');
                     if (clinicsResponse.ok) {
                         const clinics = await clinicsResponse.json();
                         populateClinicsGrid(clinics);
@@ -502,7 +502,7 @@
             }
             
             try {
-                const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/status`, {
+                const response = await fetch(`https://digital-healthcare-pbl.onrender.com/api/appointments/${appointmentId}/status`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -534,7 +534,7 @@
             
             try {
                 console.log('DEBUG: Sending rejection request for appointment:', appointmentId);
-                const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/status`, {
+                const response = await fetch(`https://digital-healthcare-pbl.onrender.com/api/appointments/${appointmentId}/status`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -571,7 +571,7 @@
             }
             
             try {
-                const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/status`, {
+                const response = await fetch(`https://digital-healthcare-pbl.onrender.com/api/appointments/${appointmentId}/status`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -689,7 +689,7 @@
             
             // Load specializations
             try {
-                const response = await fetch('http://localhost:8080/api/specializations');
+                const response = await fetch('https://digital-healthcare-pbl.onrender.com/api/specializations');
                 if (response.ok) {
                     const specializations = await response.json();
                     const select = document.getElementById('editSpecialization');
@@ -707,7 +707,7 @@
 
             // Load clinics
             try {
-                const response = await fetch('http://localhost:8080/api/clinics');
+                const response = await fetch('https://digital-healthcare-pbl.onrender.com/api/clinics');
                 if (response.ok) {
                     const clinics = await response.json();
                     const select = document.getElementById('editClinic');
@@ -734,7 +734,7 @@
             const formData = new FormData(e.target);
             
             try {
-                const response = await fetch(`http://localhost:8080/api/doctors/${localStorage.getItem('userId')}`, {
+                const response = await fetch(`https://digital-healthcare-pbl.onrender.com/api/doctors/${localStorage.getItem('userId')}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',

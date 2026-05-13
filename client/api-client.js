@@ -3,7 +3,7 @@
  * Handles automatic token inclusion, error handling, and 401/403 responses
  */
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'https://digital-healthcare-pbl.onrender.com/api';
 
 /**
  * Get JWT token from localStorage

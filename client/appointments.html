@@ -195,7 +195,7 @@
                 // Load clinics
                 let clinics = [];
                 try {
-                    const clinicsResponse = await fetch('http://localhost:8080/api/clinics', {
+                    const clinicsResponse = await fetch('https://digital-healthcare-pbl.onrender.com/api/clinics', {
                         method: 'GET',
                         headers: { 'Accept': 'application/json' }
                     });
@@ -214,7 +214,7 @@
 
                 // Load doctors
                 try {
-                    const doctorsResponse = await fetch('http://localhost:8080/api/doctors', {
+                    const doctorsResponse = await fetch('https://digital-healthcare-pbl.onrender.com/api/doctors', {
                         method: 'GET',
                         headers: { 'Accept': 'application/json' }
                     });
@@ -328,7 +328,7 @@
 
             try {
                 // Fetch booked slots from backend
-                const response = await fetch(`http://localhost:8080/api/appointments/booked-slots/${selectedDoctor}/${selectedDate}`, {
+                const response = await fetch(`https://digital-healthcare-pbl.onrender.com/api/appointments/booked-slots/${selectedDoctor}/${selectedDate}`, {
                     cache: 'no-cache' // Ensure fresh data, no browser caching
                 });
                 console.debug('booked-slots response status:', response.status);

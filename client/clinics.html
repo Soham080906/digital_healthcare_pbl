@@ -90,8 +90,8 @@
         async function loadClinics() {
             try {
                 const [clinicsResponse, doctorsResponse] = await Promise.all([
-                    fetch('http://localhost:8080/api/clinics'),
-                    fetch('http://localhost:8080/api/doctors')
+                    fetch('https://digital-healthcare-pbl.onrender.com/api/clinics'),
+                    fetch('https://digital-healthcare-pbl.onrender.com/api/doctors')
                 ]);
 
                 if (!clinicsResponse.ok) throw new Error('Failed to fetch clinics: ' + clinicsResponse.status);
