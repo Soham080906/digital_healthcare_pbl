@@ -71,6 +71,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(List.of(
                 "http://127.0.0.1:5501",
                 "http://localhost:5501",
+                "http://localhost:5173",
                 "https://astounding-meerkat-03dfa2.netlify.app"  // 👈 ADD THIS
         ));
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
