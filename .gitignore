@@ -11,6 +11,10 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# Spring Boot sensitive configurations
+application-*.properties
+application-*.yml
+
 # Logs
 logs
 *.log
